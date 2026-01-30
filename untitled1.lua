@@ -1,0 +1,1112 @@
+--[[
+Vai tomar no cu woj
+
+]]
+
+--// Loaded Check
+
+if getgenv().gamesense and getgenv().gamesense.loaded then
+	warn("FS ALREADY LOADED GG")
+	return
+end
+getgenv().gamesense = {loaded = true}
+
+local Activated = false
+
+--///// Services
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Debris = game:GetService("Debris")
+local TextChatService = game:GetService("TextChatService")
+local HTTPService = game:GetService("HttpService")
+
+--///// UI Library
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+local AnimSocket =  loadstring(game:HttpGet("https://raw.github.com/0zBug/AnimSocket/main/main.lua"))()
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+Library.ForceCheckbox = false
+Library.ShowToggleFrameInKeybinds = true
+
+local Window = Library:CreateWindow({
+	Title = "yankuizaOnTop",
+	Footer = "version: BETA",
+	Icon = false,
+	NotifySide = "Right",
+	ShowCustomCursor = true,
+})
+
+local Tabs = {
+	Key = Window:AddKeyTab("Credits"),
+}
+
+--///// RESTO DO CODIGO (segurança)
+
+--///// Variables
+--// Tables
+local Dump = {
+	BallPrediction = {}
+}
+
+--// Miscs
+local IS_4ASIDE = false
+local IS_LEGACY = false
+local NO_FOLDER = false
+
+--// Instances
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character
+local Humanoid = Character:WaitForChild("Humanoid")
+local HRP = Character:WaitForChild("HumanoidRootPart")
+
+local BallsFolder = nil
+local MainModule = nil
+local EventsFolder = nil
+local PingRemote = nil
+local PingHandler = nil
+local _BALLS = {}
+
+if workspace:FindFirstChild("Balls", true) then
+	BallsFolder = workspace:FindFirstChild("Balls", true)
+else
+	NO_FOLDER = true
+	for ID, Ball in pairs(workspace:GetChildren()) do
+		if Ball.Name == "fakeBaIlExpIoiter" or Ball.Name == "fakeBall" or Ball.Name == "MPS" or Ball.Name == "TPS" or Ball.Name == "CSF" or Ball.Name == "l̸̼̔il̷͎̅ḭ̴͘iḮ̷̙il̶̼̈́il̴̘̕Ĩ̵̹į̴̌" then
+			table.insert(_BALLS, Ball)
+		end
+	end
+end
+if LocalPlayer.Backpack:FindFirstChild("ToolManagment") then
+	IS_LEGACY = true
+	MainModule = LocalPlayer.Backpack:WaitForChild("ToolManagment")
+elseif LocalPlayer.Backpack:FindFirstChild("module") then
+	IS_4ASIDE = true
+	MainModule = LocalPlayer.Backpack:WaitForChild("module")
+end
+if ReplicatedStorage:FindFirstChild("Events") or ReplicatedStorage:FindFirstChild("Event") then
+	EventsFolder = ReplicatedStorage:FindFirstChild("Events") or ReplicatedStorage:FindFirstChild("Event")
+end
+if ReplicatedStorage:FindFirstChild("UpdatePing") or (EventsFolder and EventsFolder:FindFirstChild("UpdatePing")) then
+	PingRemote = ReplicatedStorage:FindFirstChild("UpdatePing") or EventsFolder:FindFirstChild("UpdatePing")
+end
+if LocalPlayer.PlayerScripts:FindFirstChild("PingHandler") or LocalPlayer.PlayerScripts:FindFirstChild("ClientPing") then
+	PingHandler = LocalPlayer.PlayerScripts:FindFirstChild("PingHandler") or LocalPlayer.PlayerScripts:FindFirstChild("ClientPing")
+end
+
+local ReachBox = Instance.new("Part")
+ReachBox.Name = tostring(math.random(100000, 999999))
+ReachBox.Size = Vector3.new(0, 0, 0)
+ReachBox.CFrame = CFrame.new(math.huge, math.huge, math.huge)
+ReachBox.Anchored = true
+ReachBox.CanCollide = false
+ReachBox.CanTouch = true
+ReachBox.CanQuery = false
+ReachBox.Massless = true
+ReachBox.Transparency = 0.9
+ReachBox.Material = Enum.Material.SmoothPlastic
+ReachBox.CastShadow = false
+ReachBox.Parent = workspace
+
+local GS_GUI = Instance.new("ScreenGui")
+GS_GUI.Name = tostring(math.random(100000, 999999))
+GS_GUI.IgnoreGuiInset = true
+GS_GUI.Parent = game:GetService("CoreGui")
+local Dumbass = Instance.new("ImageLabel")
+Dumbass.Name = "Dumbass"
+Dumbass.AnchorPoint = Vector2.new(1, 1)
+Dumbass.BackgroundColor3 = Color3.new(0, 0, 0)
+Dumbass.BackgroundTransparency = 1
+Dumbass.Position = UDim2.new(1, 25, 1, 15)
+Dumbass.Size = UDim2.new(0, 150, 0, 300)
+Dumbass.Image = "rbxassetid://95334651149795"
+Dumbass.Visible = false
+Dumbass.Parent = GS_GUI
+
+--// Utility Functions
+local function quadraticSolver(a, b, c)
+	local x1 = (-b + math.sqrt((b*b) -4 * a * c)) / (2 * a)
+	local x2 = (-b - math.sqrt((b*b) -4 * a * c)) / (2 * a)
+	if x2 > x1 then
+		return x2
+	else
+		return x1
+	end
+end
+local function findTimeAtHeight(a, vel, h, startingH)
+	local x = h - startingH
+	local x1 = (math.sqrt((vel * vel) + 2 * a * x ) - vel) / a
+	local x2 = -(math.sqrt((vel * vel) + 2 * a * x) + vel) / a
+	if x2 > x1 then
+		return x2
+	else
+		return x1
+	end
+end
+local function findHeightAtTime(vel, t, acc)
+	return vel.Y * t + 0.5 * -acc * (t*t)
+end
+local function findPositionAtTime(vel, t, startingPos, acc)
+	local height = findHeightAtTime(vel, t, acc)
+	return startingPos + Vector3.new(vel.X * t, height, vel.Z * t)
+end
+
+--///// Functions
+local function findLandingPosition(Vo, startingPosition, acc, max)
+	local seconds = quadraticSolver((0.5 * -acc), Vo.Y, startingPosition.Y)
+	local lastPosition = startingPosition
+
+	local predParams = RaycastParams.new()
+	predParams.FilterType = Enum.RaycastFilterType.Exclude
+	if NO_FOLDER then
+		predParams.FilterDescendantsInstances = {_BALLS}
+	else
+		predParams.FilterDescendantsInstances = {BallsFolder}
+	end
+
+	for i = 1, max do
+		local t = seconds * (1/max * i)
+		local nextPosition = findPositionAtTime(Vo, t, startingPosition, acc)
+
+		local result = workspace:Raycast(lastPosition, (nextPosition - lastPosition))
+		if result then
+			local baseHeight = result.Position.Y
+			local timeAtHeight = findTimeAtHeight(-acc, Vo.Y, baseHeight, startingPosition.Y)
+			local offset = findPositionAtTime(Vo, timeAtHeight, startingPosition, acc)
+			return offset
+		end
+		lastPosition = nextPosition
+	end
+
+	local horizontalVel = Vector3.new(Vo.X, 0, Vo.Z)
+	local endingOffset = horizontalVel * seconds
+	return startingPosition + endingOffset + Vector3.new(0, findHeightAtTime(Vo, seconds, acc), 0)
+end
+
+local function ClearDump(DumpType)
+	for ID, DumpInstance in pairs(Dump[DumpType]) do
+		if DumpInstance:IsA("Instance") then
+			DumpInstance:Destroy()
+		end
+	end
+	Dump[DumpType] = {}
+end
+
+local function GetPlayerFromString(String)
+	for ID, TargetPlayer in pairs(Players:GetPlayers()) do
+		if TargetPlayer.Name:sub(1, #String):lower() == String:lower() then
+			return TargetPlayer
+		end
+	end
+end
+
+local function PredictBall(Ball)
+	local LandingPosition = findLandingPosition(Ball.AssemblyLinearVelocity, Ball.Position, workspace.Gravity, Options.BallPredAccuracy.Value)
+	local BallPredAtt0 = Instance.new("Attachment")
+	BallPredAtt0.Name = tostring(math.random(100000,999999))
+	BallPredAtt0.WorldPosition = Ball.Position
+	BallPredAtt0.Parent = workspace.Terrain
+	table.insert(Dump.BallPrediction, BallPredAtt0)
+	local BallPredAtt1 = Instance.new("Attachment")
+	BallPredAtt1.Name = tostring(math.random(100000,999999))
+	BallPredAtt1.WorldPosition = LandingPosition
+	BallPredAtt1.Parent = workspace.Terrain
+	table.insert(Dump.BallPrediction, BallPredAtt1)
+	local BallPredBeam = Instance.new("Beam")
+	BallPredBeam.Name = tostring(math.random(100000,999999))
+	BallPredBeam.Color = ColorSequence.new(Options.BallPredTrailColor.Value)
+	BallPredBeam.LightEmission = 0
+	BallPredBeam.LightInfluence = 0
+	BallPredBeam.Brightness = 1
+	BallPredBeam.Transparency = NumberSequence.new(Options.BallPredTrailColor.Transparency)
+	BallPredBeam.Attachment0 = BallPredAtt0
+	BallPredBeam.Attachment1 = BallPredAtt1
+	BallPredBeam.FaceCamera = true
+	BallPredBeam.Width0 = Options.BallPredTrailSize.Value
+	BallPredBeam.Width1 = Options.BallPredTrailSize.Value
+	BallPredBeam.Parent = Ball
+	table.insert(Dump.BallPrediction, BallPredBeam)
+end
+
+Tabs.Reach = Window:AddTab("Reach", "footprints")
+Tabs.Ball = Window:AddTab("Ball", "volleyball")
+Tabs.Character = Window:AddTab("Character", "volleyball")
+Tabs.Visuals = Window:AddTab("Visuals", "eye")
+Tabs.Miscs = Window:AddTab("Miscs", "ellipsis")
+Tabs.Config = Window:AddTab("UI Settings", "settings")
+
+--// Reach Tab
+local ReachMainGroupbox = Tabs.Reach:AddLeftGroupbox("Main")
+local ReachTabbox = Tabs.Reach:AddRightTabbox()
+local ReachMainTab
+local ReachShootTab
+local ReachPassTab
+local ReachLongTab
+local ReachTackleTab
+local ReachDribbleTab
+local ReachSaveTab
+if UserInputService.TouchEnabled then
+	ReachMainTab = ReachTabbox:AddTab('Main')
+else
+	ReachShootTab = ReachTabbox:AddTab('Shoot')
+	ReachPassTab = ReachTabbox:AddTab('Pass')
+	ReachLongTab = ReachTabbox:AddTab('Long')
+	ReachTackleTab = ReachTabbox:AddTab('Tackle')
+	ReachDribbleTab = ReachTabbox:AddTab('Dribble')
+	ReachSaveTab = ReachTabbox:AddTab('Save')
+end
+
+ReachMainGroupbox:AddToggle("ReachMasterToggle", {
+	Text = "Enabled",
+	Tooltip = "Master toggle for reach.",
+})
+ReachMainGroupbox:AddToggle("ReachVisualizerToggle", {
+	Text = "Visualizer",
+	Tooltip = "Visualizer of the reach box.",
+}):AddColorPicker("ReachVisualizerColor", {
+	Default = Color3.new(1, 1, 1),
+	Title = "Visualizer Color.",
+	Transparency = 0.9,
+})
+
+local function CreateReachTab(TabsElement, ReachType)
+	TabsElement:AddToggle("Reach"..ReachType.."Toggle", {
+		Text = "Enabled",
+		Tooltip = "Toggle for "..string.lower(ReachType).." reach.",
+	})
+	TabsElement:AddToggle("InfiniteReach"..ReachType.."Toggle", {
+		Text = "Infinite Reach",
+		Risky = true,
+		Tooltip = "Makes the "..string.lower(ReachType).." reach infinite.",
+	})
+	TabsElement:AddToggle("Reach"..ReachType.."CompToggle", {
+		Text = "Comp Reach",
+		Tooltip = "Reaches only if you dont have network ownership.",
+	})
+	TabsElement:AddSlider("Reach"..ReachType.."SizeX", {
+		Text = "Size X",
+		Default = 0,
+		Min = 0,
+		Max = 200,
+		Rounding = 1,
+		Tooltip = "Sets the "..string.lower(ReachType).." reach X size.",
+	})
+	TabsElement:AddSlider("Reach"..ReachType.."SizeY", {
+		Text = "Size Y",
+		Default = 0,
+		Min = 0,
+		Max = 200,
+		Rounding = 1,
+		Tooltip = "Sets the "..string.lower(ReachType).." reach Y size.",
+	})
+	TabsElement:AddSlider("Reach"..ReachType.."SizeZ", {
+		Text = "Size Z",
+		Default = 0,
+		Min = 0,
+		Max = 200,
+		Rounding = 1,
+		Tooltip = "Sets the "..string.lower(ReachType).." reach Z size.",
+	})
+	TabsElement:AddSlider("Reach"..ReachType.."OffsetX", {
+		Text = "Offset X",
+		Default = 0,
+		Min = -10,
+		Max = 10,
+		Rounding = 1,
+		Tooltip = "Sets the "..string.lower(ReachType).." reach X offset.",
+	})
+	TabsElement:AddSlider("Reach"..ReachType.."OffsetY", {
+		Text = "Offset Y",
+		Default = 0,
+		Min = -10,
+		Max = 10,
+		Rounding = 1,
+		Tooltip = "Sets the "..string.lower(ReachType).." reach Y offset.",
+	})
+	TabsElement:AddSlider("Reach"..ReachType.."OffsetZ", {
+		Text = "Offset Z",
+		Default = 0,
+		Min = -10,
+		Max = 10,
+		Rounding = 1,
+		Tooltip = "Sets the "..string.lower(ReachType).." reach Z offset.",
+	})
+	TabsElement:AddDropdown("Reach"..ReachType.."BallSelector", {
+		Values = {"Closest to character", "Furthest to character"},
+		Default = "Closest to character",
+		Text = "Ball selection",
+		Tooltip = "Choose which ball should be the prority for reach.",
+	})
+end
+
+if UserInputService.TouchEnabled then
+	CreateReachTab(ReachMainTab, "Main")
+else
+	CreateReachTab(ReachShootTab, "Shoot")
+	CreateReachTab(ReachPassTab, "Pass")
+	CreateReachTab(ReachLongTab, "Long")
+	CreateReachTab(ReachTackleTab, "Tackle")
+	CreateReachTab(ReachDribbleTab, "Dribble")
+	CreateReachTab(ReachSaveTab, "Save")
+end
+
+--// Ball Tab
+local BallPredictionGroupbox = Tabs.Ball:AddLeftGroupbox("Main")
+local BallMacrosGroupbox = Tabs.Ball:AddRightGroupbox("Macros")
+
+BallPredictionGroupbox:AddToggle("BallPredToggle", {
+	Text = "Ball Prediction",
+	Tooltip = "Predicts where the ball will land.",
+	Default = false,
+	Visible = true,
+}):AddColorPicker("BallPredTrailColor", {
+	Default = Color3.new(1, 1, 1),
+	Title = " Color",
+	Transparency = 0,
+})
+BallPredictionGroupbox:AddSlider("BallPredTrailSize", {
+	Text = "Trail Size",
+	Default = 0.1,
+	Min = 0.01,
+	Max = 0.5,
+	Rounding = 2,
+	Tooltip = "Changes the trail thickness.",
+})
+BallPredictionGroupbox:AddSlider("BallPredHZ", {
+	Text = "Refresh Rate",
+	Default = 0.1,
+	Min = 0,
+	Max = 1,
+	Rounding = 2,
+	Tooltip = "Changes how often the ball prediction will refresh.",
+})
+BallPredictionGroupbox:AddSlider("BallPredThreshold", {
+	Text = "Prediction Threshold",
+	Default = 25,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Tooltip = "Sets the minimal ball velocity to show the prediction trail.",
+})
+BallPredictionGroupbox:AddSlider("BallPredAccuracy", {
+	Text = "Prediction Accuracy",
+	Default = 5,
+	Min = 1,
+	Max = 10,
+	Rounding = 0,
+	Tooltip = "Sets how many raycast will be fired per prediction refresh to ensure accracy. WARNING: The higher the value the more resources it will take to calculate.",
+})
+
+BallMacrosGroupbox:AddToggle("HomboloMacroToggle", {
+	Text = "Hombolo Macro",
+	Tooltip = "Makes the ball always be over your head",
+	Default = false,
+	Visible = true,
+}):AddKeyPicker("HomboloMacroKeybind", {
+	Default = "P",
+	SyncToggleState = true,
+	Mode = "Toggle",
+
+	Text = "Hombolo Macro",
+	NoUI = false,
+})
+
+--// Character Tab
+local CharHumGroupbox = Tabs.Character:AddLeftGroupbox("Humanoid")
+CharHumGroupbox:AddToggle("CharSpeedToggle", {
+	Text = "Speed",
+	Tooltip = "Changes how fast the character moves. (CFrame based)",
+	Default = false,
+	Visible = true,
+})
+CharHumGroupbox:AddSlider("CharSpeed", {
+	Text = "Speed Value",
+	Default = 0,
+	Min = 0,
+	Max = 10,
+	Rounding = 1,
+	Tooltip = "Sets the speed value.",
+})
+
+if not UserInputService.TouchEnabled then
+	local CharCustomMovesGroupbox = Tabs.Character:AddRightGroupbox("Custom Moves")
+	CharCustomMovesGroupbox:AddToggle("InsanePowerShoot", {
+		Text = "Insane Power Shoot",
+		Tooltip = "Keybind: G",
+		Default = false,
+		Visible = true,
+	})
+	CharCustomMovesGroupbox:AddSlider("InsanePowerValue", {
+		Text = "Insane Power Value",
+		Default = 250,
+		Min = 100,
+		Max = 1000,
+		Rounding = 0,
+		Tooltip = "Sets how powerful will the insane power be.",
+	})
+	CharCustomMovesGroupbox:AddSlider("InsanePowerHeight", {
+		Text = "Insane Power Height",
+		Default = 10,
+		Min = 0,
+		Max = 100,
+		Rounding = 0,
+		Tooltip = "Sets how high will the insane power go.",
+	})
+end
+
+--// Visuals Tab
+local VisualsLightingTab = Tabs.Visuals:AddLeftGroupbox("Lighting")
+local VisualsOtherTab = Tabs.Visuals:AddRightGroupbox("Other")
+VisualsLightingTab:AddToggle("SkyboxColorToggle", {
+	Text = "Skybox Color",
+	Tooltip = "Changes the skybox color of your chocie",
+	Default = false,
+	Visible = true,
+}):AddColorPicker("SkyboxColor", {
+	Default = Color3.new(1, 1, 1),
+	Title = "Skybox Color",
+}):AddColorPicker("SkyboxDecay", {
+	Default = Color3.new(1, 1, 1),
+	Title = "Skybox Decay",
+})
+VisualsLightingTab:AddSlider("SkyboxGlare", {
+	Text = "Skybox Glare",
+	Default = 1,
+	Min = 0,
+	Max = 10,
+	Rounding = 2,
+})
+VisualsLightingTab:AddSlider("SkyboxHaze", {
+	Text = "Skybox Haze",
+	Default = 1,
+	Min = 0,
+	Max = 10,
+	Rounding = 2,
+})
+VisualsLightingTab:AddDivider()
+VisualsLightingTab:AddToggle("CorrectionToggle", {
+	Text = "Correction",
+	Tooltip = "Lets you correct the lighting in the game",
+	Default = false,
+	Visible = true,
+}):AddColorPicker("CorrectionColor", {
+	Default = Color3.new(1, 1, 1),
+	Title = "Tint Color ",
+})
+VisualsLightingTab:AddSlider("CorrectionBrightness", {
+	Text = "Brightness",
+	Default = 0,
+	Min = -1,
+	Max = 1,
+	Rounding = 2,
+})
+VisualsLightingTab:AddSlider("CorrectionContrast", {
+	Text = "Contrast",
+	Default = 0,
+	Min = -1,
+	Max = 1,
+	Rounding = 2,
+})
+VisualsLightingTab:AddSlider("CorrectionSaturation", {
+	Text = "Saturation",
+	Default = 0,
+	Min = -1,
+	Max = 1,
+	Rounding = 2,
+})
+
+VisualsOtherTab:AddToggle("DumbassToggle", {
+	Text = "Dumbass on your screen",
+	Tooltip = "What do you even want to know?",
+	Default = false,
+	Visible = true,
+})
+
+--// Miscs Tab
+local PingSpoofGroupbox = Tabs.Miscs:AddLeftGroupbox("Ping Spoof")
+PingSpoofGroupbox:AddToggle("PingSpoofToggle", {
+	Text = "Ping Spoofer",
+	Tooltip = "Changes the ping that displays on the leaderboard. (might affect ball react)",
+	Default = false,
+	Visible = true,
+})
+PingSpoofGroupbox:AddSlider("PingSpoof", {
+	Text = "Ping",
+	Default = 100,
+	Min = 0,
+	Max = 1000,
+	Rounding = 0,
+	Tooltip = "Sets ping displayed on the leaderboard.",
+})
+PingSpoofGroupbox:AddSlider("PingSpoofSpike", {
+	Text = "Ping Spike",
+	Default = 25,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Tooltip = "Sets how much the ping spoofer will spike to make it look more legit.",
+})
+PingSpoofGroupbox:AddSlider("PingSpoofHZ", {
+	Text = "Ping Refresh Rate",
+	Default = 1,
+	Min = 0.1,
+	Max = 5,
+	Rounding = 1,
+	Tooltip = "Changes how fast the ping will update.",
+})
+
+--// Settings Tab
+local ConfigGroupbox = Tabs.Config:AddLeftGroupbox("Menu")
+
+ConfigGroupbox:AddToggle("KeybindMenuOpen", {
+	Default = Library.KeybindFrame.Visible,
+	Text = "Open Keybind Menu",
+	Callback = function(value)
+		Library.KeybindFrame.Visible = value
+	end,
+})
+ConfigGroupbox:AddToggle("ShowCustomCursor", {
+	Text = "Custom Cursor",
+	Default = true,
+	Callback = function(Value)
+		Library.ShowCustomCursor = Value
+	end,
+})
+ConfigGroupbox:AddDropdown("NotificationSide", {
+	Values = { "Left", "Right" },
+	Default = "Right",
+
+	Text = "Notification Side",
+
+	Callback = function(Value)
+		Library:SetNotifySide(Value)
+	end,
+})
+ConfigGroupbox:AddDropdown("DPIDropdown", {
+	Values = { "50%", "75%", "100%", "125%", "150%", "175%", "200%" },
+	Default = "100%",
+
+	Text = "DPI Scale",
+
+	Callback = function(Value)
+		Value = Value:gsub("%%", "")
+		local DPI = tonumber(Value)
+
+		Library:SetDPIScale(DPI)
+	end,
+})
+ConfigGroupbox:AddDivider()
+ConfigGroupbox:AddLabel("Menu bind")
+	:AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu keybind" })
+
+-- 	ConfigGroupbox:AddButton("Unload", function()
+-- 	Library:Unload()
+-- end)
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+
+SaveManager:IgnoreThemeSettings()
+
+SaveManager:SetIgnoreIndexes({"MenuKeybind"})
+
+ThemeManager:SetFolder("gamesense-mps")
+SaveManager:SetFolder("gamesense-mps/mps")
+
+SaveManager:BuildConfigSection(Tabs.Config)
+
+ThemeManager:ApplyToTab(Tabs.Config)
+
+
+SaveManager:LoadAutoloadConfig()
+
+if not NO_FOLDER then
+	Library:Notify({
+		Title = "Ball Detection",
+		Description = 'Ball detection type set to: "Balls Folder"',
+		Time = 5, 
+	})
+else
+	Library:Notify({
+		Title = "Ball Detection",
+		Description = 'Ball detection type set to: "Workspace Detection"',
+		Time = 5, 
+	})
+end
+
+--// UI Change Events
+if PingHandler then
+	Toggles.PingSpoofToggle:OnChanged(function()
+		PingHandler.Enabled = not Toggles.PingSpoofToggle.Value
+	end)
+end
+
+Toggles.DumbassToggle:OnChanged(function()
+	Dumbass.Visible = Toggles.DumbassToggle.Value
+end)
+
+local OldAtmosphere = nil
+local OldCorrection = nil
+Toggles.SkyboxColorToggle:OnChanged(function()
+	if Toggles.SkyboxColorToggle.Value then
+		if Lighting:FindFirstChildOfClass("Atmosphere") then
+			OldAtmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+			OldAtmosphere.Parent = nil
+		end
+		if Lighting:FindFirstChild("GS_ATMO") then
+			Lighting:WaitForChild("GS_ATMO"):Destroy()
+		end
+		local GS_ATMO = Instance.new("Atmosphere")
+		GS_ATMO.Name = "GS_ATMO"
+		GS_ATMO.Density = 0
+		GS_ATMO.Offset = 0
+		GS_ATMO.Color = Options.SkyboxColor.Value
+		GS_ATMO.Decay = Options.SkyboxDecay.Value
+		GS_ATMO.Glare = Options.SkyboxGlare.Value
+		GS_ATMO.Haze = Options.SkyboxHaze.Value
+		GS_ATMO.Parent = Lighting
+	else
+		if Lighting:FindFirstChild("GS_ATMO") then
+			Lighting:WaitForChild("GS_ATMO"):Destroy()
+		end
+		if OldAtmosphere then
+			OldAtmosphere.Parent = Lighting
+			OldAtmosphere = nil
+		end
+	end
+end)
+Toggles.CorrectionToggle:OnChanged(function()
+	if Toggles.CorrectionToggle.Value then
+		if Lighting:FindFirstChildOfClass("ColorCorrectionEffect") then
+			OldCorrection = Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
+			OldCorrection.Parent = nil
+		end
+		if Lighting:FindFirstChild("GS_CCOR") then
+			Lighting:WaitForChild("GS_CCOR"):Destroy()
+		end
+		local GS_CCOR = Instance.new("ColorCorrectionEffect")
+		GS_CCOR.Name = "GS_CCOR"
+		GS_CCOR.Brightness = Options.CorrectionBrightness.Value
+		GS_CCOR.Contrast = Options.CorrectionContrast.Value
+		GS_CCOR.Saturation = Options.CorrectionSaturation.Value
+		GS_CCOR.TintColor = Options.CorrectionColor.Value
+		GS_CCOR.Parent = Lighting
+	else
+		if Lighting:FindFirstChild("GS_CCOR") then
+			Lighting:WaitForChild("GS_CCOR"):Destroy()
+		end
+		if OldCorrection then
+			OldCorrection.Parent = Lighting
+			OldCorrection = nil
+		end
+	end
+end)
+
+Options.SkyboxColor:OnChanged(function()
+	if Lighting:FindFirstChild("GS_ATMO") then
+		Lighting:FindFirstChild("GS_ATMO").Color = Options.SkyboxColor.Value
+	end
+end)
+Options.SkyboxDecay:OnChanged(function()
+	if Lighting:FindFirstChild("GS_ATMO") then
+		Lighting:FindFirstChild("GS_ATMO").Decay = Options.SkyboxDecay.Value
+	end
+end)
+Options.SkyboxGlare:OnChanged(function()
+	if Lighting:FindFirstChild("GS_ATMO") then
+		Lighting:FindFirstChild("GS_ATMO").Glare = Options.SkyboxGlare.Value
+	end
+end)
+Options.SkyboxHaze:OnChanged(function()
+	if Lighting:FindFirstChild("GS_ATMO") then
+		Lighting:FindFirstChild("GS_ATMO").Haze = Options.SkyboxHaze.Value
+	end
+end)
+
+Options.CorrectionColor:OnChanged(function()
+	if Lighting:FindFirstChild("GS_CCOR") then
+		Lighting:FindFirstChild("GS_CCOR").TintColor = Options.CorrectionColor.Value
+	end
+end)
+Options.CorrectionBrightness:OnChanged(function()
+	if Lighting:FindFirstChild("GS_CCOR") then
+		Lighting:FindFirstChild("GS_CCOR").Brightness = Options.CorrectionBrightness.Value
+	end
+end)
+Options.CorrectionContrast:OnChanged(function()
+	if Lighting:FindFirstChild("GS_CCOR") then
+		Lighting:FindFirstChild("GS_CCOR").Contrast = Options.CorrectionContrast.Value
+	end
+end)
+Options.CorrectionSaturation:OnChanged(function()
+	if Lighting:FindFirstChild("GS_CCOR") then
+		Lighting:FindFirstChild("GS_CCOR").Saturation = Options.CorrectionSaturation.Value
+	end
+end)
+
+local MacroBall = nil
+local BallAttachment = nil
+local CharAttachment = nil
+local BallForce = nil
+Toggles.HomboloMacroToggle:OnChanged(function()
+	if Toggles.HomboloMacroToggle.Value then
+		if HRP and Character:FindFirstChild("Head") then
+			local Balls
+			if NO_FOLDER then
+				Balls = _BALLS
+			else
+				Balls = BallsFolder:GetChildren()
+			end
+			table.sort(Balls, function(a, b) return (a.Position - HRP.Position).Magnitude < (b.Position - HRP.Position).Magnitude end)
+			if #Balls > 0 then
+				MacroBall = Balls[1]
+				BallAttachment = Instance.new("Attachment")
+				BallAttachment.Name = tostring(math.random(100000,999999))
+				BallAttachment.Parent = MacroBall
+				CharAttachment = Instance.new("Attachment")
+				CharAttachment.Name = tostring(math.random(100000,999999))
+				CharAttachment.Parent = Character.Head
+				BallForce = Instance.new("AlignPosition")
+				BallForce.Name = tostring(math.random(100000,999999))
+				BallForce.ApplyAtCenterOfMass = true
+				BallForce.Attachment0 = BallAttachment
+				BallForce.Attachment1 = CharAttachment
+				BallForce.ForceLimitMode = Enum.ForceLimitMode.PerAxis
+				BallForce.MaxAxesForce = Vector3.new(math.huge, 0, math.huge)
+				BallForce.Responsiveness = 200
+				BallForce.Parent = MacroBall
+			end
+		end
+	else
+		if BallAttachment then
+			BallAttachment:Destroy()
+		end
+		if CharAttachment then
+			CharAttachment:Destroy()
+		end
+		if BallForce then
+			BallForce:Destroy()
+		end
+		MacroBall = nil
+	end
+end)
+
+--// Script Functionality
+local Channel = AnimSocket.Connect("GS-CHANNEL")
+Channel.OnMessage:Connect(function(Player, Message)
+	Message = string.split(Message, "+")
+	if Message[1] == "kick" and Message[2] == LocalPlayer.Name then
+		if Message[3] then
+			LocalPlayer:Kick(Message[3])
+		else
+			LocalPlayer:Kick()
+		end
+	end
+end)
+
+-- TextChatService.SendingMessage:Connect(function(Message)
+-- 	Message = Message.Text
+-- 	Message = string.split(Message, " ")
+-- 	if Message[1] == "!gs" then
+-- 		local Command = string.lower(Message[2])
+-- 		if Command == "kick" then
+-- 			local TargetPlayer = GetPlayerFromString(Message[3])
+-- 			if TargetPlayer then
+-- 				if Message[4] then
+-- 					local Reason = table.concat(Message, " ", 4)
+-- 					Channel:Send("kick+"..TargetPlayer.Name.."+"..Reason)
+-- 				else
+-- 					Channel:Send("kick+"..TargetPlayer.Name)
+-- 				end
+-- 			end
+-- 		end
+-- 	end
+-- end)
+
+LocalPlayer.CharacterAdded:Connect(function(NewCharacter)
+	Character = NewCharacter
+	Humanoid = Character:WaitForChild("Humanoid")
+	HRP = NewCharacter:WaitForChild("HumanoidRootPart")
+
+	if LocalPlayer.Backpack:FindFirstChild("ToolManagment") then
+		MainModule = LocalPlayer.Backpack:WaitForChild("ToolManagment")
+	elseif LocalPlayer.Backpack:FindFirstChild("module") then
+		MainModule = LocalPlayer.Backpack:WaitForChild("module")
+	end
+
+	local BypassSuccess = pcall(function()
+		for ID, Function in pairs(getgc(true)) do
+			if typeof(Function) == "function" then
+				local FunctionName = debug.info(Function, "n")
+				if FunctionName == "reachcheck" then
+					hookfunction(Function, newcclosure(function()
+						return false
+					end))
+				elseif FunctionName == "touchingcheck" then
+					hookfunction(Function, newcclosure(function()
+						return false
+					end))
+				elseif FunctionName == "IsBallBoundingHitbox" then
+					hookfunction(Function, newcclosure(function()
+						return true
+					end))
+				end
+			end
+		end
+	end)
+	if not BypassSuccess then
+		Library:Notify({
+			Title = "Critical Error",
+			Description = "Bypass failed!",
+			Time = 10, 
+		})
+	end
+end)
+
+pcall(function()
+	for ID, Function in pairs(getgc(true)) do
+		if typeof(Function) == "function" then
+			local FunctionName = debug.info(Function, "n")
+			if FunctionName == "reachcheck" then
+				hookfunction(Function, newcclosure(function()
+					return false
+				end))
+			elseif FunctionName == "touchingcheck" then
+				hookfunction(Function, newcclosure(function()
+					return false
+				end))
+			elseif FunctionName == "IsBallBoundingHitbox" then
+				hookfunction(Function, newcclosure(function()
+					return true
+				end))
+			end
+		end
+	end
+end)
+
+pcall(function()
+	local OldTouchingParts
+	OldTouchingParts = hookmetamethod(Instance.new("Part"), "__namecall", newcclosure(function(Self, ...)
+		local Method = getnamecallmethod()
+		if not checkcaller() and Method == "GetTouchingParts" then
+			if (NO_FOLDER and table.find(_BALLS, Self)) or table.find(BallsFolder:GetChildren(), Self) then
+				local TouchingParts = OldTouchingParts(Self, ...)
+				for ID, Limb in pairs(Character:GetChildren()) do
+					if Limb:IsA("Part") then
+						table.insert(TouchingParts, Limb)
+					end
+				end
+				
+				return TouchingParts
+			end
+		end
+		return OldTouchingParts(Self, ...)
+	end))
+end)
+
+if NO_FOLDER then
+	workspace.ChildAdded:Connect(function(Ball)
+		_BALLS = {}
+		for ID, Ball in pairs(workspace:GetChildren()) do
+			if Ball.Name == "fakeBaIlExpIoiter" or Ball.Name == "fakeBall" or Ball.Name == "MPS" or Ball.Name == "TPS" or Ball.Name == "CSF" or Ball.Name == "l̸̼̔il̷͎̅ḭ̴͘iḮ̷̙il̶̼̈́il̴̘̕Ĩ̵̹į̴̌" then
+				table.insert(_BALLS, Ball)
+			end
+		end
+	end)
+	workspace.ChildRemoved:Connect(function(Ball)
+		_BALLS = {}
+		for ID, Ball in pairs(workspace:GetChildren()) do
+			if Ball.Name == "fakeBaIlExpIoiter" or Ball.Name == "fakeBall" or Ball.Name == "MPS" or Ball.Name == "TPS" or Ball.Name == "CSF" or Ball.Name == "l̸̼̔il̷͎̅ḭ̴͘iḮ̷̙il̶̼̈́il̴̘̕Ĩ̵̹į̴̌" then
+				table.insert(_BALLS, Ball)
+			end
+		end
+	end)
+end
+
+RunService.RenderStepped:Connect(function(DeltaTime)
+	if HRP and Humanoid then
+		if Toggles.ReachMasterToggle.Value then
+			local ReachType = nil
+			local InfReach = false
+			if UserInputService.TouchEnabled and Toggles.ReachMainToggle and Toggles.ReachMainToggle.Value then
+				ReachType = "Main"
+				if Toggles.InfiniteReachMainToggle.Value then
+					InfReach = true
+				end
+			elseif Character:FindFirstChild("Shoot") or Character:FindFirstChild("Kick") and Toggles.ReachShootToggle.Value then
+				ReachType = "Shoot"
+				if Toggles.InfiniteReachShootToggle.Value then
+					InfReach = true
+				end
+			elseif Character:FindFirstChild("Pass") and Toggles.ReachPassToggle.Value then
+				ReachType = "Pass"
+				if Toggles.InfiniteReachPassToggle.Value then
+					InfReach = true
+				end
+			elseif Character:FindFirstChild("Long") and Toggles.ReachLongToggle.Value then
+				ReachType = "Long"
+				if Toggles.InfiniteReachLongToggle.Value then
+					InfReach = true
+				end
+			elseif Character:FindFirstChild("Tackle") and Toggles.ReachTackleToggle.Value then
+				ReachType = "Tackle"
+				if Toggles.InfiniteReachTackleToggle.Value then
+					InfReach = true
+				end
+			elseif Character:FindFirstChild("Dribble") and Toggles.ReachDribbleToggle.Value then
+				ReachType = "Dribble"
+				if Toggles.InfiniteReachDribbleToggle.Value then
+					InfReach = true
+				end
+			elseif Character:FindFirstChild("Save") or Character:FindFirstChild("Clear") or Character:FindFirstChild("GK") and Toggles.ReachSaveToggle.Value then
+				ReachType = "Save"
+				if Toggles.InfiniteReachSaveToggle.Value then
+					InfReach = true
+				end
+			end
+			if ReachType == nil or InfReach then
+				ReachBox.Size = Vector3.new(0, 0, 0)
+				ReachBox.CFrame = CFrame.new(math.huge, math.huge, math.huge)
+			else
+				ReachBox.Size = Vector3.new(Options["Reach"..ReachType.."SizeX"].Value, Options["Reach"..ReachType.."SizeY"].Value, Options["Reach"..ReachType.."SizeZ"].Value)
+				ReachBox.CFrame = HRP.CFrame * CFrame.new(Options["Reach"..ReachType.."OffsetX"].Value, Options["Reach"..ReachType.."OffsetY"].Value, Options["Reach"..ReachType.."OffsetZ"].Value)
+			end
+			ReachBox.Color = Options.ReachVisualizerColor.Value
+			if Toggles.ReachVisualizerToggle.Value then
+				ReachBox.Transparency = Options.ReachVisualizerColor.Transparency
+			else
+				ReachBox.Transparency = 1
+			end
+
+			task.spawn(function()
+				RunService.Heartbeat:Wait()
+
+				local ReachOverlapParams = OverlapParams.new()
+				ReachOverlapParams.FilterType = Enum.RaycastFilterType.Include
+				if NO_FOLDER then
+					ReachOverlapParams.FilterDescendantsInstances = {_BALLS}
+				else
+					ReachOverlapParams.FilterDescendantsInstances = {BallsFolder}
+				end
+		
+				local TouchingBalls
+				if InfReach then
+					if NO_FOLDER then
+						TouchingBalls = _BALLS
+					else
+						TouchingBalls = BallsFolder:GetChildren()
+					end
+				else
+					TouchingBalls = workspace:GetPartsInPart(ReachBox, ReachOverlapParams)
+				end
+				table.sort(TouchingBalls, function(a, b) return (a.Position - HRP.Position).Magnitude < (b.Position - HRP.Position).Magnitude end)
+				if #TouchingBalls > 0 then
+					local Ball = TouchingBalls[1]
+					if Toggles["Reach"..ReachType.."CompToggle"].Value then
+						if Ball:FindFirstChild("Owner") or Ball:FindFirstChild("owner") then
+							local OwnerTag = Ball:WaitForChild("Owner") or Ball:WaitForChild("owner")
+							if OwnerTag.Value == LocalPlayer or OwnerTag.Value == LocalPlayer.Name or OwnerTag.Value == LocalPlayer.UserId then
+								return
+							end
+						end
+					end
+					for ID, Limb in pairs(Character:GetChildren()) do
+						if Limb:IsA("Part") then
+							firetouchinterest(Limb, Ball, 0)
+							firetouchinterest(Limb, Ball, 1)
+						end
+					end
+				end
+			end)
+		else
+			ReachBox.Size = Vector3.new(0, 0, 0)
+			ReachBox.CFrame = CFrame.new(math.huge, math.huge, math.huge)
+		end
+	end
+end)
+
+RunService.Heartbeat:Connect(function(DeltaTime)
+	if HRP and Humanoid then
+		if Toggles.CharSpeedToggle.Value and Character.PrimaryPart then
+			Character.PrimaryPart:PivotTo(Character.PrimaryPart.CFrame + Humanoid.MoveDirection * DeltaTime * Options.CharSpeed.Value)
+		end
+	end
+end)
+
+UserInputService.InputBegan:Connect(function(Key, GameProcessed)
+	if not GameProcessed then
+		if Key.KeyCode == Enum.KeyCode.G then
+			if not UserInputService.TouchEnabled then
+				if Character:FindFirstChild("Shoot") and Toggles.InsanePowerShoot.Value then
+					pcall(function()
+						local rlCFrame = CFrame.new(0.5, -1.5, -1) * CFrame.fromEulerAnglesXYZ(0.3490658503988659, 0, 0)
+						local raCFrame = CFrame.new(1.5, 0.5, 0.5) * CFrame.fromEulerAnglesXYZ(-3.141592653589793, 4, 4)
+						local laCFrame = CFrame.new(-1.5, 0.5, -0.5) * CFrame.fromEulerAnglesXYZ(-3.141592653589793, 4, -4)
+						require(MainModule).EditWeld("Right Leg", rlCFrame)
+						require(MainModule).EditWeld("Right Arm", raCFrame)
+						require(MainModule).EditWeld("Left Arm", laCFrame)
+					end)
+					local TouchEvent
+					TouchEvent = Character["Right Leg"].Touched:Connect(function(Ball)
+						if (NO_FOLDER and table.find(_BALLS, Ball)) or table.find(BallsFolder:GetChildren(), Ball) then
+							if IS_4ASIDE then
+								require(MainModule).shoot(Ball, Character.Torso.CFrame.LookVector * Options.InsanePowerValue.Value + Vector3.new(0, Options.InsanePowerHeight.Value, 0), Vector3.new(math.huge, math.huge, math.huge), false)
+							elseif IS_LEGACY then
+								require(MainModule).ApplyForce(Ball, Vector3.new(math.huge, math.huge, math.huge), Character.Torso.CFrame.LookVector * Options.InsanePowerValue.Value + Vector3.new(0, Options.InsanePowerHeight.Value, 0), "Right Leg")
+							end
+							TouchEvent:Disconnect()
+						end
+					end)
+					task.wait(0.5)
+					if TouchEvent then
+						TouchEvent:Disconnect()
+					end
+					pcall(function()
+						require(MainModule).ResetWelds()
+					end)
+				end
+			end
+		end
+	end
+end)
+
+task.spawn(function()
+	while task.wait(Options.BallPredHZ.Value) do
+		ClearDump("BallPrediction")
+		if Toggles.BallPredToggle.Value then
+			if NO_FOLDER then
+				for ID, Ball in pairs(_BALLS) do
+					if Ball.AssemblyLinearVelocity.Magnitude > Options.BallPredThreshold.Value then
+						PredictBall(Ball)
+					end
+				end
+			else
+				for ID, Ball in pairs(BallsFolder:GetChildren()) do
+					if Ball.AssemblyLinearVelocity.Magnitude > Options.BallPredThreshold.Value then
+						PredictBall(Ball)
+					end
+				end
+			end
+		end
+	end
+end)
+
+-- visual basico
+if PingRemote and PingHandler then
+	task.spawn(function()
+		while task.wait(Options.PingSpoofHZ.Value) do
+			if Toggles.PingSpoofToggle.Value then
+				PingRemote:FireServer(math.clamp(Options.PingSpoof.Value + math.random(-Options.PingSpoofSpike.Value, Options.PingSpoofSpike.Value), 0, math.huge))
+			end
+		end
+	end)
+end-- realbunni.com
