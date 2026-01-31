@@ -3,6 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
 local Window = Rayfield:CreateWindow({
 	Name = "SAML HUB",
@@ -17,14 +18,12 @@ local Window = Rayfield:CreateWindow({
 	KeySystem = false,
 })
 
--- CONFIG
 local v_headMeshScale = Vector3.new(0.275, 0.275, 0.275)
 local v_maxHeadSize = Vector3.new(4.5, 4.5, 4.5)
 local v_legSize = Vector3.new(2.475, 2, 2.475)
 local v_legMeshID = "rbxassetid://109302786609504"
 local v_legTexture = "rbxassetid://15901064828"
 
--- TABS
 local Tab = Window:CreateTab("SAML LEAKS", 4483362458)
 local ArmsTab = Window:CreateTab("Arms", 84545033532370)
 local LegTab = Window:CreateTab("Legs", 79244816732976)
@@ -32,8 +31,7 @@ local HeadTab = Window:CreateTab("Head", 74460027428660)
 local BallTab = Window:CreateTab("Ball", 101881060418088)
 
 local function GetChar()
-	local p = LocalPlayer
-	return p.Character or p.CharacterAdded:Wait()
+	return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
 ----------------------------------------------------------------
@@ -49,7 +47,7 @@ local LegToggle = LegTab:CreateToggle({
 		if not rLeg or not lLeg then return end
 
 		if Value then
-			for _, leg in pairs({rLeg, lLeg}) do
+			for _,leg in pairs({rLeg,lLeg}) do
 				local mesh = leg:FindFirstChild("SAML_Mesh") or Instance.new("SpecialMesh", leg)
 				mesh.Name = "SAML_Mesh"
 				mesh.MeshId = v_legMeshID
@@ -58,14 +56,14 @@ local LegToggle = LegTab:CreateToggle({
 				leg.Size = v_legSize
 			end
 		else
-			for _, leg in pairs({rLeg, lLeg}) do
+			for _,leg in pairs({rLeg,lLeg}) do
 				if leg:FindFirstChild("SAML_Mesh") then
 					leg.SAML_Mesh:Destroy()
 				end
 				leg.Size = Vector3.new(1,2,1)
 			end
 		end
-	end,
+	end
 })
 
 LegTab:CreateKeybind({
@@ -73,7 +71,7 @@ LegTab:CreateKeybind({
 	CurrentKeybind = "I",
 	Callback = function()
 		LegToggle:Set(not LegToggle.CurrentValue)
-	end,
+	end
 })
 
 ----------------------------------------------------------------
@@ -97,7 +95,7 @@ local HeadToggle = HeadTab:CreateToggle({
 			local m = head:FindFirstChildOfClass("SpecialMesh")
 			if m then m.Scale = Vector3.new(1.25,1.25,1.25) end
 		end
-	end,
+	end
 })
 
 HeadTab:CreateKeybind({
@@ -105,7 +103,7 @@ HeadTab:CreateKeybind({
 	CurrentKeybind = "H",
 	Callback = function()
 		HeadToggle:Set(not HeadToggle.CurrentValue)
-	end,
+	end
 })
 
 ----------------------------------------------------------------
@@ -121,21 +119,21 @@ local AutoCatchToggle = ArmsTab:CreateToggle({
 		if not rArm or not lArm then return end
 
 		if Value then
-			for _, arm in pairs({rArm, lArm}) do
+			for _,arm in pairs({rArm,lArm}) do
 				local mesh = arm:FindFirstChild("SAML_ArmMesh") or Instance.new("SpecialMesh", arm)
 				mesh.Name = "SAML_ArmMesh"
 				mesh.MeshId = "rbxassetid://113784110775765"
 				arm.Size = Vector3.new(6,6,3)
 			end
 		else
-			for _, arm in pairs({rArm, lArm}) do
+			for _,arm in pairs({rArm,lArm}) do
 				if arm:FindFirstChild("SAML_ArmMesh") then
 					arm.SAML_ArmMesh:Destroy()
 				end
 				arm.Size = Vector3.new(1,2,1)
 			end
 		end
-	end,
+	end
 })
 
 ArmsTab:CreateKeybind({
@@ -143,146 +141,84 @@ ArmsTab:CreateKeybind({
 	CurrentKeybind = "U",
 	Callback = function()
 		AutoCatchToggle:Set(not AutoCatchToggle.CurrentValue)
-	end,
+	end
 })
-
 
 ----------------------------------------------------------------
 -- SPEED
 ----------------------------------------------------------------
 Tab:CreateSlider({
 	Name = "SAML WALKSPEED",
-	Range = {16, 100},
+	Range = {16,100},
 	Increment = 1,
 	CurrentValue = 16,
-	Callback = function(Value)
+	Callback = function(v)
 		local hum = GetChar():FindFirstChild("Humanoid")
-		if hum then hum.WalkSpeed = Value end
-	end,
+		if hum then hum.WalkSpeed = v end
+	end
 })
 
 ----------------------------------------------------------------
--- BALL PREDICTION
+-- CAMERA PART (NOVO)
 ----------------------------------------------------------------
-local BallPredictionEnabled = false
-local BallPredColor = Color3.fromRGB(255,255,255)
-local BallPredSize = 0.1
-local BallPredAccuracy = 5
-local BallPredRefresh = 0.1
-local BallPredThreshold = 25
-local BallPredDump = {}
+local CameraPartEnabled = false
+local Parts = {}
+local PartSize = Vector3.new(1.715, 0.987, 1.213)
+local Offset = Vector3.new(-13.562, 7.672, -8.132)
 
-local function quadraticSolver(a,b,c)
-	local x1 = (-b + math.sqrt(b*b - 4*a*c)) / (2*a)
-	local x2 = (-b - math.sqrt(b*b - 4*a*c)) / (2*a)
-	return (x2 > x1 and x2 or x1)
+local function createPart(char)
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+
+	local p = Instance.new("Part")
+	p.Size = PartSize
+	p.Anchored = true
+	p.CanCollide = false
+	p.Parent = char
+	Parts[char] = p
 end
 
-local function findLandingPosition(vel,pos,acc,accu)
-	local t = quadraticSolver(0.5*-acc, vel.Y, pos.Y)
-	return pos + Vector3.new(vel.X*t, -acc*(t*t)/2 + vel.Y*t, vel.Z*t)
+local function clearParts()
+	for _,p in pairs(Parts) do
+		if p then p:Destroy() end
+	end
+	table.clear(Parts)
 end
 
-BallTab:CreateToggle({
-	Name = "BALL PREDICTION",
+Tab:CreateToggle({
+	Name = "SAML CAMERA PART",
 	CurrentValue = false,
 	Callback = function(v)
-		BallPredictionEnabled = v
-	end,
-})
-
-BallTab:CreateColorPicker({
-	Name = "Ball Prediction Color",
-	Color = BallPredColor,
-	Callback = function(v)
-		BallPredColor = v
-	end,
-})
-
-BallTab:CreateSlider({
-	Name = "Trail Size",
-	Range = {0.01, 0.5},
-	Increment = 0.01,
-	CurrentValue = 0.1,
-	Callback = function(v)
-		BallPredSize = v
-	end,
-})
-
-BallTab:CreateSlider({
-	Name = "Prediction Accuracy",
-	Range = {1, 10},
-	Increment = 1,
-	CurrentValue = 5,
-	Callback = function(v)
-		BallPredAccuracy = v
-	end,
-})
-
-BallTab:CreateSlider({
-	Name = "Refresh Rate",
-	Range = {0.05, 1},
-	Increment = 0.05,
-	CurrentValue = 0.1,
-	Callback = function(v)
-		BallPredRefresh = v
-	end,
-})
-
-BallTab:CreateSlider({
-	Name = "Velocity Threshold",
-	Range = {0, 100},
-	Increment = 1,
-	CurrentValue = 25,
-	Callback = function(v)
-		BallPredThreshold = v
-	end,
-})
-
-task.spawn(function()
-	while true do
-		task.wait(BallPredRefresh)
-
-		for _,i in pairs(BallPredDump) do
-			if i then i:Destroy() end
+		CameraPartEnabled = v
+		if not v then
+			clearParts()
+			return
 		end
-		table.clear(BallPredDump)
 
-		if not BallPredictionEnabled then continue end
-
-local BallsFolder = workspace:WaitForChild("Debris"):WaitForChild("Balls")
-
-for _,obj in pairs(BallsFolder:GetChildren()) do
-	if obj:IsA("BasePart")
-	and obj.AssemblyLinearVelocity.Magnitude > BallPredThreshold then
-
-
-
-				local land = findLandingPosition(
-					obj.AssemblyLinearVelocity,
-					obj.Position,
-					workspace.Gravity,
-					BallPredAccuracy
-				)
-
-				local a0 = Instance.new("Attachment", workspace.Terrain)
-				a0.WorldPosition = obj.Position
-				local a1 = Instance.new("Attachment", workspace.Terrain)
-				a1.WorldPosition = land
-
-				local beam = Instance.new("Beam")
-				beam.Attachment0 = a0
-				beam.Attachment1 = a1
-				beam.Width0 = BallPredSize
-				beam.Width1 = BallPredSize
-				beam.FaceCamera = true
-				beam.Color = ColorSequence.new(BallPredColor)
-				beam.Parent = obj
-
-				table.insert(BallPredDump, a0)
-				table.insert(BallPredDump, a1)
-				table.insert(BallPredDump, beam)
+		for _,plr in pairs(Players:GetPlayers()) do
+			if plr.Character then
+				createPart(plr.Character)
 			end
+			plr.CharacterAdded:Connect(function(char)
+				if CameraPartEnabled then
+					task.wait(1)
+					createPart(char)
+				end
+			end)
+		end
+	end
+})
+
+RunService.RenderStepped:Connect(function()
+	if not CameraPartEnabled then return end
+
+	local look = Camera.CFrame.LookVector
+	local rot = CFrame.lookAt(Vector3.zero, look)
+
+	for char,p in pairs(Parts) do
+		local root = char:FindFirstChild("HumanoidRootPart")
+		if root and p then
+			p.CFrame = CFrame.new(root.Position + Offset) * rot
 		end
 	end
 end)
