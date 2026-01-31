@@ -17,12 +17,14 @@ local Window = Rayfield:CreateWindow({
 	KeySystem = false,
 })
 
+-- CONFIG
 local v_headMeshScale = Vector3.new(0.275, 0.275, 0.275)
 local v_maxHeadSize = Vector3.new(4.5, 4.5, 4.5)
 local v_legSize = Vector3.new(2.475, 2, 2.475)
 local v_legMeshID = "rbxassetid://109302786609504"
 local v_legTexture = "rbxassetid://15901064828"
 
+-- TABS
 local Tab = Window:CreateTab("SAML LEAKS", 4483362458)
 local ArmsTab = Window:CreateTab("Arms", 84545033532370)
 local LegTab = Window:CreateTab("Legs", 79244816732976)
@@ -30,20 +32,257 @@ local HeadTab = Window:CreateTab("Head", 74460027428660)
 local BallTab = Window:CreateTab("Ball", 101881060418088)
 
 local function GetChar()
-	return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+	local p = LocalPlayer
+	return p.Character or p.CharacterAdded:Wait()
 end
+
+----------------------------------------------------------------
+-- LEGS
+----------------------------------------------------------------
+local LegToggle = LegTab:CreateToggle({
+	Name = "BIGFOOT SAML",
+	CurrentValue = false,
+	Callback = function(Value)
+		local char = GetChar()
+		local rLeg = char:FindFirstChild("Right Leg")
+		local lLeg = char:FindFirstChild("Left Leg")
+		if not rLeg or not lLeg then return end
+
+		if Value then
+			for _, leg in pairs({rLeg, lLeg}) do
+				local mesh = leg:FindFirstChild("SAML_Mesh") or Instance.new("SpecialMesh", leg)
+				mesh.Name = "SAML_Mesh"
+				mesh.MeshId = v_legMeshID
+				mesh.TextureId = v_legTexture
+				mesh.Scale = Vector3.new(1,1,1)
+				leg.Size = v_legSize
+			end
+		else
+			for _, leg in pairs({rLeg, lLeg}) do
+				if leg:FindFirstChild("SAML_Mesh") then
+					leg.SAML_Mesh:Destroy()
+				end
+				leg.Size = Vector3.new(1,2,1)
+			end
+		end
+	end,
+})
+
+LegTab:CreateKeybind({
+	Name = "SAML BIGFOOT KEY",
+	CurrentKeybind = "I",
+	Callback = function()
+		LegToggle:Set(not LegToggle.CurrentValue)
+	end,
+})
+
+----------------------------------------------------------------
+-- HEAD
+----------------------------------------------------------------
+local HeadToggle = HeadTab:CreateToggle({
+	Name = "BIG HEAD SAML",
+	CurrentValue = false,
+	Callback = function(Value)
+		local head = GetChar():FindFirstChild("Head")
+		if not head then return end
+
+		if Value then
+			head.Size = v_maxHeadSize
+			head.CanCollide = false
+			local m = head:FindFirstChildOfClass("SpecialMesh")
+			if m then m.Scale = v_headMeshScale end
+		else
+			head.Size = Vector3.new(2,1,1)
+			head.CanCollide = true
+			local m = head:FindFirstChildOfClass("SpecialMesh")
+			if m then m.Scale = Vector3.new(1.25,1.25,1.25) end
+		end
+	end,
+})
+
+HeadTab:CreateKeybind({
+	Name = "SAML BIGHEAD KEY",
+	CurrentKeybind = "H",
+	Callback = function()
+		HeadToggle:Set(not HeadToggle.CurrentValue)
+	end,
+})
+
+----------------------------------------------------------------
+-- ARMS
+----------------------------------------------------------------
+local AutoCatchToggle = ArmsTab:CreateToggle({
+	Name = "AUTO CATCH SAML",
+	CurrentValue = false,
+	Callback = function(Value)
+		local char = GetChar()
+		local rArm = char:FindFirstChild("Right Arm")
+		local lArm = char:FindFirstChild("Left Arm")
+		if not rArm or not lArm then return end
+
+		if Value then
+			for _, arm in pairs({rArm, lArm}) do
+				local mesh = arm:FindFirstChild("SAML_ArmMesh") or Instance.new("SpecialMesh", arm)
+				mesh.Name = "SAML_ArmMesh"
+				mesh.MeshId = "rbxassetid://113784110775765"
+				arm.Size = Vector3.new(6,6,3)
+			end
+		else
+			for _, arm in pairs({rArm, lArm}) do
+				if arm:FindFirstChild("SAML_ArmMesh") then
+					arm.SAML_ArmMesh:Destroy()
+				end
+				arm.Size = Vector3.new(1,2,1)
+			end
+		end
+	end,
+})
+
+ArmsTab:CreateKeybind({
+	Name = "AUTO CATCH KEY",
+	CurrentKeybind = "U",
+	Callback = function()
+		AutoCatchToggle:Set(not AutoCatchToggle.CurrentValue)
+	end,
+})
+
 
 ----------------------------------------------------------------
 -- SPEED
 ----------------------------------------------------------------
 Tab:CreateSlider({
 	Name = "SAML WALKSPEED",
-	Range = {16,100},
+	Range = {16, 100},
 	Increment = 1,
 	CurrentValue = 16,
-	Callback = function(v)
+	Callback = function(Value)
 		local hum = GetChar():FindFirstChild("Humanoid")
-		if hum then hum.WalkSpeed = v end
-	end
+		if hum then hum.WalkSpeed = Value end
+	end,
 })
 
+----------------------------------------------------------------
+-- BALL PREDICTION
+----------------------------------------------------------------
+local BallPredictionEnabled = false
+local BallPredColor = Color3.fromRGB(255,255,255)
+local BallPredSize = 0.1
+local BallPredAccuracy = 5
+local BallPredRefresh = 0.1
+local BallPredThreshold = 25
+local BallPredDump = {}
+
+local function quadraticSolver(a,b,c)
+	local x1 = (-b + math.sqrt(b*b - 4*a*c)) / (2*a)
+	local x2 = (-b - math.sqrt(b*b - 4*a*c)) / (2*a)
+	return (x2 > x1 and x2 or x1)
+end
+
+local function findLandingPosition(vel,pos,acc,accu)
+	local t = quadraticSolver(0.5*-acc, vel.Y, pos.Y)
+	return pos + Vector3.new(vel.X*t, -acc*(t*t)/2 + vel.Y*t, vel.Z*t)
+end
+
+BallTab:CreateToggle({
+	Name = "BALL PREDICTION",
+	CurrentValue = false,
+	Callback = function(v)
+		BallPredictionEnabled = v
+	end,
+})
+
+BallTab:CreateColorPicker({
+	Name = "Ball Prediction Color",
+	Color = BallPredColor,
+	Callback = function(v)
+		BallPredColor = v
+	end,
+})
+
+BallTab:CreateSlider({
+	Name = "Trail Size",
+	Range = {0.01, 0.5},
+	Increment = 0.01,
+	CurrentValue = 0.1,
+	Callback = function(v)
+		BallPredSize = v
+	end,
+})
+
+BallTab:CreateSlider({
+	Name = "Prediction Accuracy",
+	Range = {1, 10},
+	Increment = 1,
+	CurrentValue = 5,
+	Callback = function(v)
+		BallPredAccuracy = v
+	end,
+})
+
+BallTab:CreateSlider({
+	Name = "Refresh Rate",
+	Range = {0.05, 1},
+	Increment = 0.05,
+	CurrentValue = 0.1,
+	Callback = function(v)
+		BallPredRefresh = v
+	end,
+})
+
+BallTab:CreateSlider({
+	Name = "Velocity Threshold",
+	Range = {0, 100},
+	Increment = 1,
+	CurrentValue = 25,
+	Callback = function(v)
+		BallPredThreshold = v
+	end,
+})
+
+task.spawn(function()
+	while true do
+		task.wait(BallPredRefresh)
+
+		for _,i in pairs(BallPredDump) do
+			if i then i:Destroy() end
+		end
+		table.clear(BallPredDump)
+
+		if not BallPredictionEnabled then continue end
+
+local BallsFolder = workspace:WaitForChild("Debris"):WaitForChild("Balls")
+
+for _,obj in pairs(BallsFolder:GetChildren()) do
+	if obj:IsA("BasePart")
+	and obj.AssemblyLinearVelocity.Magnitude > BallPredThreshold then
+
+
+
+				local land = findLandingPosition(
+					obj.AssemblyLinearVelocity,
+					obj.Position,
+					workspace.Gravity,
+					BallPredAccuracy
+				)
+
+				local a0 = Instance.new("Attachment", workspace.Terrain)
+				a0.WorldPosition = obj.Position
+				local a1 = Instance.new("Attachment", workspace.Terrain)
+				a1.WorldPosition = land
+
+				local beam = Instance.new("Beam")
+				beam.Attachment0 = a0
+				beam.Attachment1 = a1
+				beam.Width0 = BallPredSize
+				beam.Width1 = BallPredSize
+				beam.FaceCamera = true
+				beam.Color = ColorSequence.new(BallPredColor)
+				beam.Parent = obj
+
+				table.insert(BallPredDump, a0)
+				table.insert(BallPredDump, a1)
+				table.insert(BallPredDump, beam)
+			end
+		end
+	end
+end)
