@@ -3,7 +3,6 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
 
 local Window = Rayfield:CreateWindow({
 	Name = "SAML HUB",
@@ -35,116 +34,6 @@ local function GetChar()
 end
 
 ----------------------------------------------------------------
--- LEGS
-----------------------------------------------------------------
-local LegToggle = LegTab:CreateToggle({
-	Name = "BIGFOOT SAML",
-	CurrentValue = false,
-	Callback = function(Value)
-		local char = GetChar()
-		local rLeg = char:FindFirstChild("Right Leg")
-		local lLeg = char:FindFirstChild("Left Leg")
-		if not rLeg or not lLeg then return end
-
-		if Value then
-			for _,leg in pairs({rLeg,lLeg}) do
-				local mesh = leg:FindFirstChild("SAML_Mesh") or Instance.new("SpecialMesh", leg)
-				mesh.Name = "SAML_Mesh"
-				mesh.MeshId = v_legMeshID
-				mesh.TextureId = v_legTexture
-				mesh.Scale = Vector3.new(1,1,1)
-				leg.Size = v_legSize
-			end
-		else
-			for _,leg in pairs({rLeg,lLeg}) do
-				if leg:FindFirstChild("SAML_Mesh") then
-					leg.SAML_Mesh:Destroy()
-				end
-				leg.Size = Vector3.new(1,2,1)
-			end
-		end
-	end
-})
-
-LegTab:CreateKeybind({
-	Name = "SAML BIGFOOT KEY",
-	CurrentKeybind = "I",
-	Callback = function()
-		LegToggle:Set(not LegToggle.CurrentValue)
-	end
-})
-
-----------------------------------------------------------------
--- HEAD
-----------------------------------------------------------------
-local HeadToggle = HeadTab:CreateToggle({
-	Name = "BIG HEAD SAML",
-	CurrentValue = false,
-	Callback = function(Value)
-		local head = GetChar():FindFirstChild("Head")
-		if not head then return end
-
-		if Value then
-			head.Size = v_maxHeadSize
-			head.CanCollide = false
-			local m = head:FindFirstChildOfClass("SpecialMesh")
-			if m then m.Scale = v_headMeshScale end
-		else
-			head.Size = Vector3.new(2,1,1)
-			head.CanCollide = true
-			local m = head:FindFirstChildOfClass("SpecialMesh")
-			if m then m.Scale = Vector3.new(1.25,1.25,1.25) end
-		end
-	end
-})
-
-HeadTab:CreateKeybind({
-	Name = "SAML BIGHEAD KEY",
-	CurrentKeybind = "H",
-	Callback = function()
-		HeadToggle:Set(not HeadToggle.CurrentValue)
-	end
-})
-
-----------------------------------------------------------------
--- ARMS
-----------------------------------------------------------------
-local AutoCatchToggle = ArmsTab:CreateToggle({
-	Name = "AUTO CATCH SAML",
-	CurrentValue = false,
-	Callback = function(Value)
-		local char = GetChar()
-		local rArm = char:FindFirstChild("Right Arm")
-		local lArm = char:FindFirstChild("Left Arm")
-		if not rArm or not lArm then return end
-
-		if Value then
-			for _,arm in pairs({rArm,lArm}) do
-				local mesh = arm:FindFirstChild("SAML_ArmMesh") or Instance.new("SpecialMesh", arm)
-				mesh.Name = "SAML_ArmMesh"
-				mesh.MeshId = "rbxassetid://113784110775765"
-				arm.Size = Vector3.new(6,6,3)
-			end
-		else
-			for _,arm in pairs({rArm,lArm}) do
-				if arm:FindFirstChild("SAML_ArmMesh") then
-					arm.SAML_ArmMesh:Destroy()
-				end
-				arm.Size = Vector3.new(1,2,1)
-			end
-		end
-	end
-})
-
-ArmsTab:CreateKeybind({
-	Name = "AUTO CATCH KEY",
-	CurrentKeybind = "U",
-	Callback = function()
-		AutoCatchToggle:Set(not AutoCatchToggle.CurrentValue)
-	end
-})
-
-----------------------------------------------------------------
 -- SPEED
 ----------------------------------------------------------------
 Tab:CreateSlider({
@@ -159,16 +48,16 @@ Tab:CreateSlider({
 })
 
 ----------------------------------------------------------------
--- CAMERA PART (NOVO)
+-- CAMERA PART NA HEAD DOS PLAYERS
 ----------------------------------------------------------------
 local CameraPartEnabled = false
 local Parts = {}
+
 local PartSize = Vector3.new(1.715, 0.987, 1.213)
-local Offset = Vector3.new(-13.562, 7.672, -8.132)
 
 local function createPart(char)
-	local root = char:FindFirstChild("HumanoidRootPart")
-	if not root then return end
+	local head = char:FindFirstChild("Head")
+	if not head then return end
 
 	local p = Instance.new("Part")
 	p.Size = PartSize
@@ -186,10 +75,11 @@ local function clearParts()
 end
 
 Tab:CreateToggle({
-	Name = "SAML CAMERA PART",
+	Name = "SAML HEAD CAMERA ORIENT",
 	CurrentValue = false,
 	Callback = function(v)
 		CameraPartEnabled = v
+
 		if not v then
 			clearParts()
 			return
@@ -199,6 +89,7 @@ Tab:CreateToggle({
 			if plr.Character then
 				createPart(plr.Character)
 			end
+
 			plr.CharacterAdded:Connect(function(char)
 				if CameraPartEnabled then
 					task.wait(1)
@@ -212,13 +103,13 @@ Tab:CreateToggle({
 RunService.RenderStepped:Connect(function()
 	if not CameraPartEnabled then return end
 
-	local look = Camera.CFrame.LookVector
-	local rot = CFrame.lookAt(Vector3.zero, look)
-
 	for char,p in pairs(Parts) do
-		local root = char:FindFirstChild("HumanoidRootPart")
-		if root and p then
-			p.CFrame = CFrame.new(root.Position + Offset) * rot
+		local head = char:FindFirstChild("Head")
+		if head and p then
+			p.CFrame = CFrame.lookAt(
+				head.Position,
+				head.Position + head.CFrame.LookVector
+			)
 		end
 	end
 end)
