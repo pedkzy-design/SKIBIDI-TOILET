@@ -286,3 +286,93 @@ for _,obj in pairs(BallsFolder:GetChildren()) do
 		end
 	end
 end)
+
+----------------------------------------------------------------
+-- SETTINGS & AIMBOT LOGIC
+----------------------------------------------------------------
+local AimPart = nil
+local AimbotEnabled = false
+
+-- Função para criar ou remover a Part Alvo
+local function ToggleAimPart(state)
+    if state then
+        if not AimPart then
+            AimPart = Instance.new("Part")
+            AimPart.Name = "SAML_KICK_TARGET"
+            AimPart.Size = Vector3.new(2, 2, 2)
+            AimPart.Shape = Enum.PartType.Ball
+            AimPart.Color = Color3.fromRGB(255, 0, 0)
+            AimPart.Material = Enum.Material.Neon
+            AimPart.CanCollide = false
+            AimPart.Transparency = 0.5
+            AimPart.Parent = workspace
+            -- Posiciona na frente do jogador inicialmente
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                AimPart.CFrame = hrp.CFrame * CFrame.new(0, 0, -20)
+            end
+            
+            -- Tornar a part arrastável ou fixa? (Aqui ela fica fixa, você pode mover com ferramentas de BTools ou ajustar via script)
+        end
+    else
+        if AimPart then
+            AimPart:Destroy()
+            AimPart = nil
+        end
+    end
+end
+
+-- Nova Tab para o Aimbot
+local AimbotTab = Window:CreateTab("Aimbot", 4483362458)
+
+AimbotTab:CreateToggle({
+	Name = "KICK AIMBOT (TO TARGET)",
+	CurrentValue = false,
+	Callback = function(Value)
+		AimbotEnabled = Value
+        ToggleAimPart(Value)
+	end,
+})
+
+AimbotTab:CreateButton({
+    Name = "REPOSICIONAR ALVO (NA FRENTE)",
+    Callback = function()
+        if AimPart and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            AimPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -50)
+        end
+    end,
+})
+
+----------------------------------------------------------------
+-- MODIFICAÇÃO DO SISTEMA DE CHUTE (HOOK)
+----------------------------------------------------------------
+-- NOTA: Para isso funcionar perfeitamente, precisamos sobrescrever 
+-- a variável 'force' no seu script original quando o Aimbot estiver ativado.
+
+-- LOCAL ONDE VOCÊ DEVE ALTERAR NO SEU SCRIPT ORIGINAL:
+-- Procure as linhas onde define: force = (Player.Character["HumanoidRootPart"].CFrame.lookVector * power)...
+
+local function GetAimbotVelocity(originalPower)
+    if AimbotEnabled and AimPart then
+        -- Calcula a direção da Bola até a Part Alvo
+        local ball = workspace.Debris.Balls:FindFirstChild("TPS") -- Ajuste o nome se necessário
+        if ball then
+            local direction = (AimPart.Position - ball.Position).Unit
+            return direction * originalPower
+        end
+    end
+    return nil
+end
+
+-- DICA: No seu script de chute, dentro do evento .Touched, 
+-- adicione esta verificação logo após o cálculo do 'force':
+
+-- Exemplo de como aplicar no seu código:
+--[[
+    local force = (Player.Character["HumanoidRootPart"].CFrame.lookVector * power) + (Player.Character["HumanoidRootPart"].CFrame.upVector * CamAngle)
+    
+    -- ADICIONE ISSO AQUI:
+    if AimbotEnabled and AimPart then
+        force = (AimPart.Position - hit.Position).Unit * (power * 1.2) -- 1.2 para garantir força
+    end
+--]]
