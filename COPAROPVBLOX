@@ -5,15 +5,36 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 ----------------------------------------------------------------
--- [SISTEMA] BYPASS ANTI-EXPLOIT (LOOP CONSTANTE)
+-- [SISTEMA] BYPASS ANTI-EXPLOIT (LIMPEZA DE SCRIPT LOCAL)
 ----------------------------------------------------------------
+local function cleanCharacter(char)
+    -- Espera um pouco para o jogo carregar os scripts iniciais
+    task.wait(0.5) 
+    for _, child in pairs(char:GetChildren()) do
+        -- Verifica se é um LocalScript e se tem o nome padrão
+        if child:IsA("LocalScript") and child.Name == "LocalScript" then
+            child:Destroy()
+            warn("SAML HUB: Anti-Exploit LocalScript removido do personagem!")
+        end
+    end
+end
+
+-- Roda para o personagem atual e para os próximos resets
+LocalPlayer.CharacterAdded:Connect(cleanCharacter)
+if LocalPlayer.Character then
+    task.spawn(cleanCharacter, LocalPlayer.Character)
+end
+
+-- Loop de segurança (caso o script demore a carregar após o spawn)
 task.spawn(function()
-    while task.wait(0.1) do 
+    while task.wait(2) do
         pcall(function()
-            local config = workspace:FindFirstChild("Configuration")
-            if config and config:FindFirstChild("AntiExploit") then
-                if config.AntiExploit.Value ~= false then
-                    config.AntiExploit.Value = false
+            local char = LocalPlayer.Character
+            if char then
+                for _, child in pairs(char:GetChildren()) do
+                    if child:IsA("LocalScript") and child.Name == "LocalScript" then
+                        child:Destroy()
+                    end
                 end
             end
         end)
