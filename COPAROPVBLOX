@@ -60,7 +60,7 @@ local Window = Rayfield:CreateWindow({
 -- CONFIG
 local v_headMeshScale = Vector3.new(0.275, 0.275, 0.275)
 local v_maxHeadSize = Vector3.new(4.5, 4.5, 4.5)
-local v_legSize = Vector3.new(2.475, 2, 2.475)
+local v_legSize = Vector3.new(2.304, 2, 1.998)
 local v_legMeshID = "rbxassetid://109302786609504"
 local v_legTexture = "rbxassetid://15901064828"
 
