@@ -6,62 +6,72 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
 ----------------------------------------------------------------
--- [SISTEMA] BYPASS SIMPLIFICADO (CORRIGIDO)
+-- [SISTEMA] BYPASS DE REMOTE (SPOOFING)
+-- Bloqueia a detecção de tamanho alterado, mas mantém o "EstouVivo"
 ----------------------------------------------------------------
 local PlayerUpdate = ReplicatedStorage:WaitForChild("PlayerUpdate")
 
-local function applyBypass()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    
-    -- Deleta o script "Opaaa" ou "LocalScript" assim que spawnar
-    task.spawn(function()
-        while char == LocalPlayer.Character do
-            local target = char:FindFirstChild("Opaaa") or char:FindFirstChild("LocalScript")
-            if target then
-                target:Destroy()
-                warn("SAML HUB: Anti-Cheat Deletado!")
-            end
-            task.wait(1)
-        end
-    end)
+local rawmetatable = getrawmetatable(game)
+local oldNamecall = rawmetatable.__namecall
+setreadonly(rawmetatable, false)
 
-    -- Envia o sinal falso para o servidor não te kickar
-    task.spawn(function()
-        while char == LocalPlayer.Character do
-            PlayerUpdate:FireServer("EstouVivo")
-            task.wait(3) -- Intervalo exato do Anti-Cheat original
+rawmetatable.__namecall = newcclosure(function(self, ...)
+    local args = {...}
+    local method = getnamecallmethod()
+
+    -- Se o script tentar avisar o servidor sobre o tamanho:
+    if self == PlayerUpdate and method == "FireServer" then
+        if args[1] == "TamanhoAlterado" then
+            warn("SAML HUB: Tentativa de banimento por TAMANHO bloqueada!")
+            return nil -- Cancela o envio do sinal de detecção
         end
-    end)
+    end
+
+    return oldNamecall(self, ...)
+end)
+setreadonly(rawmetatable, true)
+
+----------------------------------------------------------------
+-- [SISTEMA] LIMPEZA DE SCRIPTS LOCAIS
+----------------------------------------------------------------
+local function cleanCharacter(char)
+    task.wait(0.5) 
+    for _, child in pairs(char:GetChildren()) do
+        if child:IsA("LocalScript") and child.Name == "LocalScript" then
+            -- Apenas desativa para não quebrar a árvore de instâncias do jogo
+            child.Disabled = true
+            warn("SAML HUB: LocalScript de detecção paralisado!")
+        end
+    end
 end
 
--- Roda ao resetar e ao iniciar
-LocalPlayer.CharacterAdded:Connect(applyBypass)
-task.spawn(applyBypass)
+LocalPlayer.CharacterAdded:Connect(cleanCharacter)
+if LocalPlayer.Character then task.spawn(cleanCharacter, LocalPlayer.Character) end
 
 ----------------------------------------------------------------
--- JANELA PRINCIPAL (O RESTO DO SEU SCRIPT)
+-- JANELA PRINCIPAL RAYFIELD
 ----------------------------------------------------------------
 local Window = Rayfield:CreateWindow({
-	Name = "SAML HUB",
+	Name = "SAML HUB | BYPASS EDITION",
 	Icon = 0,
-	LoadingTitle = "CARREGANDO...",
+	LoadingTitle = "INJETANDO EXPLOIT...",
 	LoadingSubtitle = "by SAMLLEAKS",
 	ConfigurationSaving = {
 		Enabled = true,
-		FolderName = nil,
-		FileName = "Big Hub"
+		FolderName = "SAML_HUB",
+		FileName = "Config"
 	},
 	KeySystem = false,
 })
 
--- CONFIG
+-- CONFIGURAÇÕES DE TAMANHO
 local v_headMeshScale = Vector3.new(0.275, 0.275, 0.275)
 local v_maxHeadSize = Vector3.new(4.5, 4.5, 4.5)
 local v_legSize = Vector3.new(2.304, 2, 1.998)
 local v_legMeshID = "rbxassetid://109302786609504"
 local v_legTexture = "rbxassetid://15901064828"
 
--- TABS
+-- ABAS
 local Tab = Window:CreateTab("SAML LEAKS", 4483362458)
 local ArmsTab = Window:CreateTab("Arms", 84545033532370)
 local LegTab = Window:CreateTab("Legs", 79244816732976)
@@ -69,12 +79,11 @@ local HeadTab = Window:CreateTab("Head", 74460027428660)
 local BallTab = Window:CreateTab("Ball", 101881060418088)
 
 local function GetChar()
-	local p = LocalPlayer
-	return p.Character or p.CharacterAdded:Wait()
+	return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
 ----------------------------------------------------------------
--- LEGS
+-- SEÇÃO: LEGS
 ----------------------------------------------------------------
 local LegToggle = LegTab:CreateToggle({
 	Name = "BIGFOOT SAML",
@@ -96,17 +105,21 @@ local LegToggle = LegTab:CreateToggle({
 			end
 		else
 			for _, leg in pairs({rLeg, lLeg}) do
-				if leg:FindFirstChild("SAML_Mesh") then
-					leg.SAML_Mesh:Destroy()
-				end
+				if leg:FindFirstChild("SAML_Mesh") then leg.SAML_Mesh:Destroy() end
 				leg.Size = Vector3.new(1,2,1)
 			end
 		end
 	end,
 })
 
+LegTab:CreateKeybind({
+	Name = "SAML BIGFOOT KEY",
+	CurrentKeybind = "L",
+	Callback = function() LegToggle:Set(not LegToggle.CurrentValue) end,
+})
+
 ----------------------------------------------------------------
--- HEAD
+-- SEÇÃO: HEAD
 ----------------------------------------------------------------
 local HeadToggle = HeadTab:CreateToggle({
 	Name = "BIG HEAD SAML",
@@ -129,8 +142,14 @@ local HeadToggle = HeadTab:CreateToggle({
 	end,
 })
 
+HeadTab:CreateKeybind({
+	Name = "SAML BIGHEAD KEY",
+	CurrentKeybind = "H",
+	Callback = function() HeadToggle:Set(not HeadToggle.CurrentValue) end,
+})
+
 ----------------------------------------------------------------
--- ARMS
+-- SEÇÃO: ARMS
 ----------------------------------------------------------------
 local AutoCatchToggle = ArmsTab:CreateToggle({
 	Name = "AUTO CATCH SAML",
@@ -150,9 +169,7 @@ local AutoCatchToggle = ArmsTab:CreateToggle({
 			end
 		else
 			for _, arm in pairs({rArm, lArm}) do
-				if arm:FindFirstChild("SAML_ArmMesh") then
-					arm.SAML_ArmMesh:Destroy()
-				end
+				if arm:FindFirstChild("SAML_ArmMesh") then arm.SAML_ArmMesh:Destroy() end
 				arm.Size = Vector3.new(1,2,1)
 			end
 		end
@@ -160,7 +177,7 @@ local AutoCatchToggle = ArmsTab:CreateToggle({
 })
 
 ----------------------------------------------------------------
--- SPEED
+-- SEÇÃO: SPEED
 ----------------------------------------------------------------
 Tab:CreateSlider({
 	Name = "SAML WALKSPEED",
@@ -174,7 +191,7 @@ Tab:CreateSlider({
 })
 
 ----------------------------------------------------------------
--- BALL PREDICTION
+-- SEÇÃO: BALL PREDICTION
 ----------------------------------------------------------------
 local BallPredictionEnabled = false
 local BallPredColor = Color3.fromRGB(255,255,255)
@@ -185,22 +202,22 @@ local BallPredThreshold = 25
 local BallPredDump = {}
 
 local function quadraticSolver(a,b,c)
-	local x1 = (-b + math.sqrt(b*b - 4*a*c)) / (2*a)
-	local x2 = (-b - math.sqrt(b*b - 4*a*c)) / (2*a)
+	local delta = (b*b) - (4*a*c)
+	if delta < 0 then return 0 end
+	local x1 = (-b + math.sqrt(delta)) / (2*a)
+	local x2 = (-b - math.sqrt(delta)) / (2*a)
 	return (x2 > x1 and x2 or x1)
 end
 
-local function findLandingPosition(vel,pos,acc,accu)
+local function findLandingPosition(vel,pos,acc)
 	local t = quadraticSolver(0.5*-acc, vel.Y, pos.Y)
-	return pos + Vector3.new(vel.X*t, -acc*(t*t)/2 + vel.Y*t, vel.Z*t)
+	return pos + Vector3.new(vel.X*t, 0, vel.Z*t)
 end
 
 BallTab:CreateToggle({
 	Name = "BALL PREDICTION",
 	CurrentValue = false,
-	Callback = function(v)
-		BallPredictionEnabled = v
-	end,
+	Callback = function(v) BallPredictionEnabled = v end,
 })
 
 task.spawn(function()
@@ -208,32 +225,37 @@ task.spawn(function()
 		task.wait(BallPredRefresh)
 		for _,i in pairs(BallPredDump) do if i then i:Destroy() end end
 		table.clear(BallPredDump)
+
 		if not BallPredictionEnabled then continue end
 
-        local Debris = workspace:FindFirstChild("Debris")
-        local BallsFolder = Debris and Debris:FindFirstChild("Balls")
+		local Debris = workspace:FindFirstChild("Debris")
+		local Balls = Debris and Debris:FindFirstChild("Balls")
+		
+		if Balls then
+			for _,obj in pairs(Balls:GetChildren()) do
+				if obj:IsA("BasePart") and obj.AssemblyLinearVelocity.Magnitude > BallPredThreshold then
+					local land = findLandingPosition(obj.AssemblyLinearVelocity, obj.Position, workspace.Gravity)
+					
+					local a0 = Instance.new("Attachment", workspace.Terrain)
+					a0.WorldPosition = obj.Position
+					local a1 = Instance.new("Attachment", workspace.Terrain)
+					a1.WorldPosition = land
 
-        if BallsFolder then
-            for _,obj in pairs(BallsFolder:GetChildren()) do
-                if obj:IsA("BasePart") and obj.AssemblyLinearVelocity.Magnitude > BallPredThreshold then
-                    local land = findLandingPosition(obj.AssemblyLinearVelocity, obj.Position, workspace.Gravity, BallPredAccuracy)
-                    local a0 = Instance.new("Attachment", workspace.Terrain)
-                    a0.WorldPosition = obj.Position
-                    local a1 = Instance.new("Attachment", workspace.Terrain)
-                    a1.WorldPosition = land
-                    local beam = Instance.new("Beam", obj)
-                    beam.Attachment0 = a0
-                    beam.Attachment1 = a1
-                    beam.Width0 = BallPredSize
-                    beam.Width1 = BallPredSize
-                    beam.Color = ColorSequence.new(BallPredColor)
-                    table.insert(BallPredDump, a0)
-                    table.insert(BallPredDump, a1)
-                    table.insert(BallPredDump, beam)
-                end
-            end
-        end
+					local beam = Instance.new("Beam")
+					beam.Attachment0 = a0
+					beam.Attachment1 = a1
+					beam.Width0 = BallPredSize
+					beam.Width1 = BallPredSize
+					beam.Color = ColorSequence.new(BallPredColor)
+					beam.Parent = obj
+
+					table.insert(BallPredDump, a0)
+					table.insert(BallPredDump, a1)
+					table.insert(BallPredDump, beam)
+				end
+			end
+		end
 	end
 end)
 
-Rayfield:Notify({Title = "SAML HUB", Content = "Bypass Ativado!", Duration = 5})
+Rayfield:Notify({Title = "SAML HUB", Content = "Bypass de Anti-Cheat Injetado!", Duration = 5})
