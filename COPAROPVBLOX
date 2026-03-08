@@ -154,15 +154,6 @@ LegTab:CreateToggle({
 	end
 })
 
-LegTab:CreateKeybind({
-	Name = "SAML BIGFOOT KEY",
-	CurrentKeybind = "L",
-	Callback = function()
-		LegToggle:Set(not LegToggle.CurrentValue)
-	end,
-})
-
-
 ----------------------------------------------------------------
 -- HEAD
 ----------------------------------------------------------------
@@ -198,14 +189,6 @@ HeadTab:CreateToggle({
 		end
 
 	end
-})
-
-HeadTab:CreateKeybind({
-	Name = "SAML BIGHEAD KEY",
-	CurrentKeybind = "L",
-	Callback = function()
-		HeadToggle:Set(not HeadToggle.CurrentValue)
-	end,
 })
 
 ----------------------------------------------------------------
@@ -250,14 +233,6 @@ ArmsTab:CreateToggle({
 		end
 
 	end
-})
-
-ArmsTab:CreateKeybind({
-	Name = "AUTO CATCH KEY",
-	CurrentKeybind = "L",
-	Callback = function()
-		AutoCatchToggle:Set(not AutoCatchToggle.CurrentValue)
-	end,
 })
 
 ----------------------------------------------------------------
