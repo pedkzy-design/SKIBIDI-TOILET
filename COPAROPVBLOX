@@ -3,11 +3,14 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+
 local LocalPlayer = Players.LocalPlayer
 
 ----------------------------------------------------------------
 -- BYPASS
 ----------------------------------------------------------------
+
 local PlayerUpdate = ReplicatedStorage:WaitForChild("PlayerUpdate",10)
 local BypassRunning = false
 
@@ -58,6 +61,7 @@ end)
 ----------------------------------------------------------------
 -- WINDOW
 ----------------------------------------------------------------
+
 local Window = Rayfield:CreateWindow({
 	Name = "SAML HUB",
 	Icon = 0,
@@ -73,6 +77,7 @@ local Window = Rayfield:CreateWindow({
 ----------------------------------------------------------------
 -- CONFIG
 ----------------------------------------------------------------
+
 local v_headMeshScale = Vector3.new(0.275,0.275,0.275)
 local v_maxHeadSize = Vector3.new(4.5,4.5,4.5)
 local v_legSize = Vector3.new(2.304,2,1.998)
@@ -82,6 +87,7 @@ local v_legTexture = "rbxassetid://15901064828"
 ----------------------------------------------------------------
 -- TABS
 ----------------------------------------------------------------
+
 local Tab = Window:CreateTab("SAML LEAKS",4483362458)
 local ArmsTab = Window:CreateTab("Arms",84545033532370)
 local LegTab = Window:CreateTab("Legs",79244816732976)
@@ -95,6 +101,7 @@ end
 ----------------------------------------------------------------
 -- LEGS
 ----------------------------------------------------------------
+
 LegTab:CreateToggle({
 	Name = "BIGFOOT SAML",
 	CurrentValue = false,
@@ -103,6 +110,7 @@ LegTab:CreateToggle({
 		local char = GetChar()
 		local rLeg = char:FindFirstChild("Right Leg")
 		local lLeg = char:FindFirstChild("Left Leg")
+
 		if not rLeg or not lLeg then return end
 
 		if Value then
@@ -122,12 +130,14 @@ LegTab:CreateToggle({
 				leg.Size = Vector3.new(1,2,1)
 			end
 		end
+
 	end,
 })
 
 ----------------------------------------------------------------
 -- HEAD
 ----------------------------------------------------------------
+
 HeadTab:CreateToggle({
 	Name = "BIG HEAD SAML",
 	CurrentValue = false,
@@ -139,20 +149,28 @@ HeadTab:CreateToggle({
 		if Value then
 			head.Size = v_maxHeadSize
 			head.CanCollide = false
+
 			local m = head:FindFirstChildOfClass("SpecialMesh")
-			if m then m.Scale = v_headMeshScale end
+			if m then
+				m.Scale = v_headMeshScale
+			end
 		else
 			head.Size = Vector3.new(2,1,1)
 			head.CanCollide = true
+
 			local m = head:FindFirstChildOfClass("SpecialMesh")
-			if m then m.Scale = Vector3.new(1.25,1.25,1.25) end
+			if m then
+				m.Scale = Vector3.new(1.25,1.25,1.25)
+			end
 		end
+
 	end,
 })
 
 ----------------------------------------------------------------
 -- ARMS
 ----------------------------------------------------------------
+
 ArmsTab:CreateToggle({
 	Name = "AUTO CATCH SAML",
 	CurrentValue = false,
@@ -161,6 +179,7 @@ ArmsTab:CreateToggle({
 		local char = GetChar()
 		local rArm = char:FindFirstChild("Right Arm")
 		local lArm = char:FindFirstChild("Left Arm")
+
 		if not rArm or not lArm then return end
 
 		if Value then
@@ -178,12 +197,14 @@ ArmsTab:CreateToggle({
 				arm.Size = Vector3.new(1,2,1)
 			end
 		end
+
 	end,
 })
 
 ----------------------------------------------------------------
 -- SPEED
 ----------------------------------------------------------------
+
 Tab:CreateSlider({
 	Name = "SAML WALKSPEED",
 	Range = {16,100},
@@ -196,12 +217,13 @@ Tab:CreateSlider({
 			hum.WalkSpeed = Value
 		end
 
-	end
+	end,
 })
 
 ----------------------------------------------------------------
 -- BALL PREDICTION
 ----------------------------------------------------------------
+
 local BallPredictionEnabled = false
 local BallPredColor = Color3.fromRGB(255,255,255)
 local BallPredSize = 0.1
@@ -216,7 +238,7 @@ local function quadraticSolver(a,b,c)
 	return (x2 > x1 and x2 or x1)
 end
 
-local function findLandingPosition(vel,pos,acc,accu)
+local function findLandingPosition(vel,pos,acc)
 	local t = quadraticSolver(0.5*-acc, vel.Y, pos.Y)
 	return pos + Vector3.new(vel.X*t, -acc*(t*t)/2 + vel.Y*t, vel.Z*t)
 end
@@ -231,6 +253,7 @@ BallTab:CreateToggle({
 
 task.spawn(function()
 	while true do
+
 		task.wait(BallPredRefresh)
 
 		for _,i in pairs(BallPredDump) do
@@ -246,9 +269,10 @@ task.spawn(function()
 
 		if BallsFolder then
 			for _,obj in pairs(BallsFolder:GetChildren()) do
+
 				if obj:IsA("BasePart") and obj.AssemblyLinearVelocity.Magnitude > BallPredThreshold then
 
-					local land = findLandingPosition(obj.AssemblyLinearVelocity,obj.Position,workspace.Gravity,BallPredAccuracy)
+					local land = findLandingPosition(obj.AssemblyLinearVelocity,obj.Position,workspace.Gravity)
 
 					local a0 = Instance.new("Attachment",workspace.Terrain)
 					a0.WorldPosition = obj.Position
@@ -274,13 +298,14 @@ task.spawn(function()
 end)
 
 ----------------------------------------------------------------
--- MASTER KEY (L)
+-- TECLA L ATIVA TUDO (SEM WALKSPEED)
 ----------------------------------------------------------------
-Tab:CreateKeybind({
-	Name = "SAML MASTER",
-	CurrentKeybind = "L",
-	HoldToInteract = false,
-	Callback = function()
+
+UserInputService.InputBegan:Connect(function(input,gameProcessed)
+
+	if gameProcessed then return end
+
+	if input.KeyCode == Enum.KeyCode.L then
 
 		local char = GetChar()
 
@@ -290,19 +315,18 @@ Tab:CreateKeybind({
 		local lArm = char:FindFirstChild("Left Arm")
 		local head = char:FindFirstChild("Head")
 
-		if rLeg and lLeg then
-			for _,leg in pairs({rLeg,lLeg}) do
+		for _,leg in pairs({rLeg,lLeg}) do
+			if leg then
 				local mesh = leg:FindFirstChild("SAML_Mesh") or Instance.new("SpecialMesh",leg)
 				mesh.Name = "SAML_Mesh"
 				mesh.MeshId = v_legMeshID
 				mesh.TextureId = v_legTexture
-				mesh.Scale = Vector3.new(1,1,1)
 				leg.Size = v_legSize
 			end
 		end
 
-		if rArm and lArm then
-			for _,arm in pairs({rArm,lArm}) do
+		for _,arm in pairs({rArm,lArm}) do
+			if arm then
 				local mesh = arm:FindFirstChild("SAML_ArmMesh") or Instance.new("SpecialMesh",arm)
 				mesh.Name = "SAML_ArmMesh"
 				mesh.MeshId = "rbxassetid://113784110775765"
@@ -314,13 +338,16 @@ Tab:CreateKeybind({
 			head.Size = v_maxHeadSize
 			head.CanCollide = false
 			local m = head:FindFirstChildOfClass("SpecialMesh")
-			if m then m.Scale = v_headMeshScale end
+			if m then
+				m.Scale = v_headMeshScale
+			end
 		end
 
 		BallPredictionEnabled = true
 
-	end,
-})
+	end
+
+end)
 
 Rayfield:Notify({
 	Title = "SAML HUB",
