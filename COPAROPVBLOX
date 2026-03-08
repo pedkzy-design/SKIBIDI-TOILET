@@ -1,193 +1,261 @@
-----------------------------------------------------------------
--- [SAML HUB] BYPASS & INTERFACE UNIFICADA
-----------------------------------------------------------------
-
--- 1. CARREGAMENTO DA INTERFACE (Com tratamento de erro)
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local LocalPlayer = Players.LocalPlayer
 
 ----------------------------------------------------------------
--- 2. SISTEMA DE BYPASS (ANT-DETECTION)
--- Intercepta o sinal "TamanhoAlterado" antes de chegar ao servidor
+-- BYPASS
 ----------------------------------------------------------------
-local PlayerUpdate = ReplicatedStorage:WaitForChild("PlayerUpdate", 15)
 
-if PlayerUpdate then
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
-        local args = {...}
+local PlayerUpdate = ReplicatedStorage:WaitForChild("PlayerUpdate",10)
 
-        -- Bloqueia apenas o reporte de erro de tamanho
-        if self == PlayerUpdate and method == "FireServer" and args[1] == "TamanhoAlterado" then
-            warn("SAML HUB: Tentativa de detecção bloqueada!")
-            return nil 
-        end
-        return oldNamecall(self, ...)
-    end)
+local BypassRunning = false
+
+local function applyBypass(char)
+
+	if BypassRunning then
+		return
+	end
+	
+	BypassRunning = true
+
+	task.spawn(function()
+		while char.Parent and LocalPlayer.Character == char do
+			
+			local anti = char:FindFirstChild("Opaaa") or char:FindFirstChild("LocalScript")
+			
+			if anti then
+				pcall(function()
+					anti:Destroy()
+				end)
+			end
+			
+			task.wait(0.5)
+		end
+		
+		BypassRunning = false
+	end)
+
+	if PlayerUpdate then
+		
+		task.spawn(function()
+			
+			while char.Parent and LocalPlayer.Character == char do
+				
+				pcall(function()
+					PlayerUpdate:FireServer("EstouVivo")
+				end)
+				
+				task.wait(3)
+				
+			end
+			
+		end)
+		
+	end
+	
 end
 
+if LocalPlayer.Character then
+	applyBypass(LocalPlayer.Character)
+end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+	task.wait(1)
+	applyBypass(char)
+end)
+
 ----------------------------------------------------------------
--- 3. JANELA PRINCIPAL
+-- WINDOW
 ----------------------------------------------------------------
+
 local Window = Rayfield:CreateWindow({
-    Name = "SAML HUB | VERSÃO FINAL",
-    LoadingTitle = "CARREGANDO ASSETS...",
-    LoadingSubtitle = "by SAMLLEAKS",
-    ConfigurationSaving = {
-        Enabled = false -- Desativado para evitar erros de inicialização
-    },
-    KeySystem = false,
+	Name = "SAML HUB",
+	Icon = 0,
+	LoadingTitle = "CARREGANDO...",
+	LoadingSubtitle = "by SAMLLEAKS",
+	ConfigurationSaving = {
+		Enabled = true,
+		FileName = "Big Hub"
+	},
+	KeySystem = false,
 })
 
--- VARIAVEIS DE CONFIGURAÇÃO
-local v_headMeshScale = Vector3.new(0.275, 0.275, 0.275)
-local v_maxHeadSize = Vector3.new(4.5, 4.5, 4.5)
-local v_legSize = Vector3.new(2.304, 2, 1.998)
+----------------------------------------------------------------
+-- CONFIG
+----------------------------------------------------------------
+
+local v_headMeshScale = Vector3.new(0.275,0.275,0.275)
+local v_maxHeadSize = Vector3.new(4.5,4.5,4.5)
+local v_legSize = Vector3.new(2.304,2,1.998)
 local v_legMeshID = "rbxassetid://109302786609504"
 local v_legTexture = "rbxassetid://15901064828"
 
--- ABAS
-local Tab = Window:CreateTab("Principal", 4483362458)
-local ArmsTab = Window:CreateTab("Arms", 84545033532370)
-local LegTab = Window:CreateTab("Legs", 79244816732976)
-local HeadTab = Window:CreateTab("Head", 74460027428660)
-local BallTab = Window:CreateTab("Ball", 101881060418088)
+----------------------------------------------------------------
+-- TABS
+----------------------------------------------------------------
+
+local Tab = Window:CreateTab("SAML LEAKS",4483362458)
+local ArmsTab = Window:CreateTab("Arms",84545033532370)
+local LegTab = Window:CreateTab("Legs",79244816732976)
+local HeadTab = Window:CreateTab("Head",74460027428660)
+local BallTab = Window:CreateTab("Ball",101881060418088)
 
 local function GetChar()
-    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+	return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 end
 
 ----------------------------------------------------------------
--- 4. FUNCIONALIDADES: LEGS
+-- LEGS
 ----------------------------------------------------------------
-local LegToggle = LegTab:CreateToggle({
-    Name = "BIGFOOT SAML",
-    CurrentValue = false,
-    Callback = function(Value)
-        local char = GetChar()
-        local parts = {char:FindFirstChild("Right Leg"), char:FindFirstChild("Left Leg")}
-        
-        for _, leg in pairs(parts) do
-            if leg then
-                if Value then
-                    local mesh = leg:FindFirstChild("SAML_Mesh") or Instance.new("SpecialMesh", leg)
-                    mesh.Name = "SAML_Mesh"
-                    mesh.MeshId = v_legMeshID
-                    mesh.TextureId = v_legTexture
-                    leg.Size = v_legSize
-                else
-                    if leg:FindFirstChild("SAML_Mesh") then leg.SAML_Mesh:Destroy() end
-                    leg.Size = Vector3.new(1, 2, 1)
-                end
-            end
-        end
-    end,
+
+LegTab:CreateToggle({
+	Name = "BIGFOOT SAML",
+	CurrentValue = false,
+	Callback = function(Value)
+
+		local char = GetChar()
+		local rLeg = char:FindFirstChild("Right Leg")
+		local lLeg = char:FindFirstChild("Left Leg")
+
+		if not rLeg or not lLeg then return end
+
+		if Value then
+
+			for _,leg in pairs({rLeg,lLeg}) do
+				
+				local mesh = leg:FindFirstChild("SAML_Mesh") or Instance.new("SpecialMesh")
+				mesh.Name = "SAML_Mesh"
+				mesh.Parent = leg
+				mesh.MeshId = v_legMeshID
+				mesh.TextureId = v_legTexture
+				mesh.Scale = Vector3.new(1,1,1)
+
+				leg.Size = v_legSize
+
+			end
+
+		else
+
+			for _,leg in pairs({rLeg,lLeg}) do
+				
+				local m = leg:FindFirstChild("SAML_Mesh")
+				if m then m:Destroy() end
+				
+				leg.Size = Vector3.new(1,2,1)
+
+			end
+
+		end
+
+	end
 })
 
 ----------------------------------------------------------------
--- 5. FUNCIONALIDADES: HEAD
+-- HEAD
 ----------------------------------------------------------------
-local HeadToggle = HeadTab:CreateToggle({
-    Name = "BIG HEAD SAML",
-    CurrentValue = false,
-    Callback = function(Value)
-        local head = GetChar():FindFirstChild("Head")
-        if not head then return end
-        if Value then
-            head.Size = v_maxHeadSize
-            head.CanCollide = false
-            local m = head:FindFirstChildOfClass("SpecialMesh")
-            if m then m.Scale = v_headMeshScale end
-        else
-            head.Size = Vector3.new(2, 1, 1)
-            head.CanCollide = true
-            local m = head:FindFirstChildOfClass("SpecialMesh")
-            if m then m.Scale = Vector3.new(1.25, 1.25, 1.25) end
-        end
-    end,
+
+HeadTab:CreateToggle({
+	Name = "BIG HEAD SAML",
+	CurrentValue = false,
+	Callback = function(Value)
+
+		local head = GetChar():FindFirstChild("Head")
+		if not head then return end
+
+		if Value then
+
+			head.Size = v_maxHeadSize
+			head.CanCollide = false
+
+			local m = head:FindFirstChildOfClass("SpecialMesh")
+			if m then
+				m.Scale = v_headMeshScale
+			end
+
+		else
+
+			head.Size = Vector3.new(2,1,1)
+			head.CanCollide = true
+
+			local m = head:FindFirstChildOfClass("SpecialMesh")
+			if m then
+				m.Scale = Vector3.new(1.25,1.25,1.25)
+			end
+
+		end
+
+	end
 })
 
 ----------------------------------------------------------------
--- 6. FUNCIONALIDADES: ARMS (AUTO CATCH)
+-- ARMS
 ----------------------------------------------------------------
-local AutoCatchToggle = ArmsTab:CreateToggle({
-    Name = "AUTO CATCH SAML",
-    CurrentValue = false,
-    Callback = function(Value)
-        local char = GetChar()
-        local arms = {char:FindFirstChild("Right Arm"), char:FindFirstChild("Left Arm")}
-        
-        for _, arm in pairs(arms) do
-            if arm then
-                if Value then
-                    local mesh = arm:FindFirstChild("SAML_ArmMesh") or Instance.new("SpecialMesh", arm)
-                    mesh.Name = "SAML_ArmMesh"
-                    mesh.MeshId = "rbxassetid://113784110775765"
-                    arm.Size = Vector3.new(6, 6, 3)
-                else
-                    if arm:FindFirstChild("SAML_ArmMesh") then arm.SAML_ArmMesh:Destroy() end
-                    arm.Size = Vector3.new(1, 2, 1)
-                end
-            end
-        end
-    end,
+
+ArmsTab:CreateToggle({
+	Name = "AUTO CATCH SAML",
+	CurrentValue = false,
+	Callback = function(Value)
+
+		local char = GetChar()
+		local rArm = char:FindFirstChild("Right Arm")
+		local lArm = char:FindFirstChild("Left Arm")
+
+		if not rArm or not lArm then return end
+
+		if Value then
+
+			for _,arm in pairs({rArm,lArm}) do
+
+				local mesh = arm:FindFirstChild("SAML_ArmMesh") or Instance.new("SpecialMesh")
+				mesh.Name = "SAML_ArmMesh"
+				mesh.Parent = arm
+				mesh.MeshId = "rbxassetid://113784110775765"
+
+				arm.Size = Vector3.new(6,6,3)
+
+			end
+
+		else
+
+			for _,arm in pairs({rArm,lArm}) do
+
+				local m = arm:FindFirstChild("SAML_ArmMesh")
+				if m then m:Destroy() end
+
+				arm.Size = Vector3.new(1,2,1)
+
+			end
+
+		end
+
+	end
 })
 
 ----------------------------------------------------------------
--- 7. FUNCIONALIDADES: SPEED & BALL PREDICTION
+-- SPEED
 ----------------------------------------------------------------
+
 Tab:CreateSlider({
-    Name = "WALKSPEED",
-    Range = {16, 120},
-    Increment = 1,
-    CurrentValue = 16,
-    Callback = function(v)
-        local hum = GetChar():FindFirstChild("Humanoid")
-        if hum then hum.WalkSpeed = v end
-    end,
+	Name = "SAML WALKSPEED",
+	Range = {16,100},
+	Increment = 1,
+	CurrentValue = 16,
+	Callback = function(Value)
+
+		local hum = GetChar():FindFirstChild("Humanoid")
+		if hum then
+			hum.WalkSpeed = Value
+		end
+
+	end
 })
 
--- Ball Prediction Logic
-local BallPredictionEnabled = false
-local BallPredDump = {}
-
-BallTab:CreateToggle({
-    Name = "ENABLE PREDICTION",
-    CurrentValue = false,
-    Callback = function(v) BallPredictionEnabled = v end,
+Rayfield:Notify({
+	Title = "SAML HUB",
+	Content = "Bypass Ativado!",
+	Duration = 5
 })
-
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        -- Limpeza de rastro anterior
-        for _, item in pairs(BallPredDump) do if item then item:Destroy() end end
-        table.clear(BallPredDump)
-
-        if BallPredictionEnabled then
-            pcall(function()
-                local balls = workspace.Debris.Balls:GetChildren()
-                for _, ball in pairs(balls) do
-                    if ball:IsA("BasePart") and ball.AssemblyLinearVelocity.Magnitude > 20 then
-                        -- Criar visual simples de queda
-                        local pos = ball.Position + (ball.AssemblyLinearVelocity * 0.5)
-                        local highlight = Instance.new("Part", workspace.Terrain)
-                        highlight.Size = Vector3.new(2, 0.2, 2)
-                        highlight.Anchored = true
-                        highlight.CanCollide = false
-                        highlight.Color = Color3.fromRGB(255, 0, 0)
-                        highlight.Position = Vector3.new(pos.X, 0.1, pos.Z)
-                        table.insert(BallPredDump, highlight)
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-Rayfield:Notify({Title = "SAML HUB", Content = "Script e Bypass carregados!", Duration = 5})
