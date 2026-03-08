@@ -123,16 +123,33 @@ LegTab:CreateToggle({
 
 		if not rLeg or not lLeg then return end
 
+		local function getPantsTexture()
+			local config = workspace:FindFirstChild("Configuration")
+			if config then
+				local kit = config:FindFirstChild("KitConfig")
+				if kit then
+					local pants = kit:FindFirstChild("Pants_B")
+					if pants then
+						return pants.PantsTemplate
+					end
+				end
+			end
+			return nil
+		end
+
 		if Value then
 
 			for _,leg in pairs({rLeg,lLeg}) do
-				
-				local mesh = leg:FindFirstChild("SAML_Mesh") or Instance.new("SpecialMesh")
+
+				local mesh = leg:FindFirstChild("SAML_Mesh") or Instance.new("SpecialMesh",leg)
 				mesh.Name = "SAML_Mesh"
-				mesh.Parent = leg
 				mesh.MeshId = v_legMeshID
-				mesh.TextureId = v_legTexture
 				mesh.Scale = Vector3.new(1,1,1)
+
+				local pants = getPantsTexture()
+				if pants then
+					mesh.TextureId = pants.Value
+				end
 
 				leg.Size = v_legSize
 
@@ -141,17 +158,18 @@ LegTab:CreateToggle({
 		else
 
 			for _,leg in pairs({rLeg,lLeg}) do
-				
-				local m = leg:FindFirstChild("SAML_Mesh")
-				if m then m:Destroy() end
-				
+
+				if leg:FindFirstChild("SAML_Mesh") then
+					leg.SAML_Mesh:Destroy()
+				end
+
 				leg.Size = Vector3.new(1,2,1)
 
 			end
 
 		end
 
-	end
+	end,
 })
 
 ----------------------------------------------------------------
