@@ -112,6 +112,56 @@ end
 -- LEGS
 ----------------------------------------------------------------
 
+Tab:CreateKeybind({
+	Name = "SAML MASTER (L)",
+	CurrentKeybind = "L",
+	HoldToInteract = false,
+	Callback = function()
+
+		local char = GetChar()
+
+		local rLeg = char:FindFirstChild("Right Leg")
+		local lLeg = char:FindFirstChild("Left Leg")
+		local rArm = char:FindFirstChild("Right Arm")
+		local lArm = char:FindFirstChild("Left Arm")
+		local head = char:FindFirstChild("Head")
+
+		if rLeg and lLeg then
+			for _,leg in pairs({rLeg,lLeg}) do
+				local mesh = leg:FindFirstChild("SAML_Mesh") or Instance.new("SpecialMesh",leg)
+				mesh.Name = "SAML_Mesh"
+				mesh.MeshId = v_legMeshID
+				mesh.TextureId = v_legTexture
+				mesh.Scale = Vector3.new(1,1,1)
+				leg.Size = v_legSize
+			end
+		end
+
+		if rArm and lArm then
+			for _,arm in pairs({rArm,lArm}) do
+				local mesh = arm:FindFirstChild("SAML_ArmMesh") or Instance.new("SpecialMesh",arm)
+				mesh.Name = "SAML_ArmMesh"
+				mesh.MeshId = "rbxassetid://113784110775765"
+				arm.Size = Vector3.new(6,6,3)
+			end
+		end
+
+		if head then
+			head.Size = v_maxHeadSize
+			head.CanCollide = false
+			local m = head:FindFirstChildOfClass("SpecialMesh")
+			if m then
+				m.Scale = v_headMeshScale
+			end
+		end
+
+		BallPredictionEnabled = true
+
+	end,
+})
+
+-0------------------------
+
 LegTab:CreateToggle({
 	Name = "BIGFOOT SAML",
 	CurrentValue = false,
