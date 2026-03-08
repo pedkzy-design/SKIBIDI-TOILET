@@ -235,6 +235,32 @@ ArmsTab:CreateToggle({
 	end
 })
 
+local FirstTouchLoop = false
+
+Tab:CreateToggle({
+	Name = "FirstTouch Reset",
+	CurrentValue = false,
+	Callback = function(Value)
+
+		FirstTouchLoop = Value
+
+		if Value then
+			task.spawn(function()
+				while FirstTouchLoop do
+
+					local config = workspace:FindFirstChild("Configuration")
+					if config and config:FindFirstChild("FirstTouch") then
+						config.FirstTouch.Value = false
+					end
+
+					task.wait(0.2)
+				end
+			end)
+		end
+
+	end,
+})
+
 ----------------------------------------------------------------
 -- SPEED
 ----------------------------------------------------------------
