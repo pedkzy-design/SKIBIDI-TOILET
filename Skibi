@@ -17,19 +17,19 @@ local Window = Rayfield:CreateWindow({
 	KeySystem = false,
 })
 
--- CONFIG
 local v_headMeshScale = Vector3.new(0.275, 0.275, 0.275)
 local v_maxHeadSize = Vector3.new(4.5, 4.5, 4.5)
 local v_legSize = Vector3.new(1.600000023841858, 2, 1.4000000953674316)
 local v_legMeshID = "rbxassetid://109302786609504"
 local v_legTexture = "rbxassetid://15901064828"
 
--- TABS
 local Tab = Window:CreateTab("SAML LEAKS", 4483362458)
 local ArmsTab = Window:CreateTab("Arms", 84545033532370)
 local LegTab = Window:CreateTab("Legs", 79244816732976)
 local HeadTab = Window:CreateTab("Head", 74460027428660)
 local BallTab = Window:CreateTab("Ball", 101881060418088)
+
+local FakeLagTab = Window:CreateTab("Fake Lag", 7734053495)
 
 local function GetChar()
 	local p = LocalPlayer
@@ -146,7 +146,6 @@ ArmsTab:CreateKeybind({
 	end,
 })
 
-
 ----------------------------------------------------------------
 -- SPEED
 ----------------------------------------------------------------
@@ -250,13 +249,11 @@ task.spawn(function()
 
 		if not BallPredictionEnabled then continue end
 
-local BallsFolder = workspace:WaitForChild("Debris"):WaitForChild("Balls")
+		local BallsFolder = workspace:WaitForChild("Debris"):WaitForChild("Balls")
 
-for _,obj in pairs(BallsFolder:GetChildren()) do
-	if obj:IsA("BasePart")
-	and obj.AssemblyLinearVelocity.Magnitude > BallPredThreshold then
-
-
+		for _,obj in pairs(BallsFolder:GetChildren()) do
+			if obj:IsA("BasePart")
+			and obj.AssemblyLinearVelocity.Magnitude > BallPredThreshold then
 
 				local land = findLandingPosition(
 					obj.AssemblyLinearVelocity,
@@ -267,6 +264,7 @@ for _,obj in pairs(BallsFolder:GetChildren()) do
 
 				local a0 = Instance.new("Attachment", workspace.Terrain)
 				a0.WorldPosition = obj.Position
+
 				local a1 = Instance.new("Attachment", workspace.Terrain)
 				a1.WorldPosition = land
 
@@ -288,91 +286,55 @@ for _,obj in pairs(BallsFolder:GetChildren()) do
 end)
 
 ----------------------------------------------------------------
--- SETTINGS & AIMBOT LOGIC
+-- FAKE LAG
 ----------------------------------------------------------------
-local AimPart = nil
-local AimbotEnabled = false
+local FakeLagEnabled = false
+local FakeLagAmount = 0.3
 
--- Função para criar ou remover a Part Alvo
-local function ToggleAimPart(state)
-    if state then
-        if not AimPart then
-            AimPart = Instance.new("Part")
-            AimPart.Name = "SAML_KICK_TARGET"
-            AimPart.Size = Vector3.new(2, 2, 2)
-            AimPart.Shape = Enum.PartType.Ball
-            AimPart.Color = Color3.fromRGB(255, 0, 0)
-            AimPart.Material = Enum.Material.Neon
-            AimPart.CanCollide = false
-            AimPart.Transparency = 0.5
-            AimPart.Parent = workspace
-            -- Posiciona na frente do jogador inicialmente
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                AimPart.CFrame = hrp.CFrame * CFrame.new(0, 0, -20)
-            end
-            
-            -- Tornar a part arrastável ou fixa? (Aqui ela fica fixa, você pode mover com ferramentas de BTools ou ajustar via script)
-        end
-    else
-        if AimPart then
-            AimPart:Destroy()
-            AimPart = nil
-        end
-    end
-end
-
--- Nova Tab para o Aimbot
-local AimbotTab = Window:CreateTab("Aimbot", 4483362458)
-
-AimbotTab:CreateToggle({
-	Name = "KICK AIMBOT (TO TARGET)",
+FakeLagTab:CreateToggle({
+	Name = "ENABLE FAKE LAG",
 	CurrentValue = false,
-	Callback = function(Value)
-		AimbotEnabled = Value
-        ToggleAimPart(Value)
+	Callback = function(v)
+		FakeLagEnabled = v
+
+		if not v then
+			settings().Network.IncomingReplicationLag = 0
+		end
 	end,
 })
 
-AimbotTab:CreateButton({
-    Name = "REPOSICIONAR ALVO (NA FRENTE)",
-    Callback = function()
-        if AimPart and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            AimPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -50)
-        end
-    end,
+FakeLagTab:CreateSlider({
+	Name = "FAKE LAG AMOUNT",
+	Range = {0, 2},
+	Increment = 0.05,
+	CurrentValue = 0.3,
+	Callback = function(v)
+		FakeLagAmount = v
+	end,
 })
 
-----------------------------------------------------------------
--- MODIFICAÇÃO DO SISTEMA DE CHUTE (HOOK)
-----------------------------------------------------------------
--- NOTA: Para isso funcionar perfeitamente, precisamos sobrescrever 
--- a variável 'force' no seu script original quando o Aimbot estiver ativado.
+FakeLagTab:CreateKeybind({
+	Name = "FAKE LAG KEY",
+	CurrentKeybind = "P",
+	Callback = function()
+		FakeLagEnabled = not FakeLagEnabled
 
--- LOCAL ONDE VOCÊ DEVE ALTERAR NO SEU SCRIPT ORIGINAL:
--- Procure as linhas onde define: force = (Player.Character["HumanoidRootPart"].CFrame.lookVector * power)...
+		if not FakeLagEnabled then
+			settings().Network.IncomingReplicationLag = 0
+		end
+	end,
+})
 
-local function GetAimbotVelocity(originalPower)
-    if AimbotEnabled and AimPart then
-        -- Calcula a direção da Bola até a Part Alvo
-        local ball = workspace.Debris.Balls:FindFirstChild("TPS") -- Ajuste o nome se necessário
-        if ball then
-            local direction = (AimPart.Position - ball.Position).Unit
-            return direction * originalPower
-        end
-    end
-    return nil
-end
+task.spawn(function()
+	while true do
+		task.wait(0.1)
 
--- DICA: No seu script de chute, dentro do evento .Touched, 
--- adicione esta verificação logo após o cálculo do 'force':
+		if FakeLagEnabled then
+			settings().Network.IncomingReplicationLag = FakeLagAmount
 
--- Exemplo de como aplicar no seu código:
---[[
-    local force = (Player.Character["HumanoidRootPart"].CFrame.lookVector * power) + (Player.Character["HumanoidRootPart"].CFrame.upVector * CamAngle)
-    
-    -- ADICIONE ISSO AQUI:
-    if AimbotEnabled and AimPart then
-        force = (AimPart.Position - hit.Position).Unit * (power * 1.2) -- 1.2 para garantir força
-    end
---]]
+			task.wait(0.05)
+
+			settings().Network.IncomingReplicationLag = 0
+		end
+	end
+end)
