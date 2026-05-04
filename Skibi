@@ -70,7 +70,7 @@ local LegToggle = LegTab:CreateToggle({
 
 LegTab:CreateKeybind({
 	Name = "SAML BIGFOOT KEY",
-	CurrentKeybind = "I",
+	CurrentKeybind = "U",
 	Callback = function()
 		LegToggle:Set(not LegToggle.CurrentValue)
 	end,
@@ -102,7 +102,7 @@ local HeadToggle = HeadTab:CreateToggle({
 
 HeadTab:CreateKeybind({
 	Name = "SAML BIGHEAD KEY",
-	CurrentKeybind = "H",
+	CurrentKeybind = "U",
 	Callback = function()
 		HeadToggle:Set(not HeadToggle.CurrentValue)
 	end,
