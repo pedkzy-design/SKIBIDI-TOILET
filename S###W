@@ -289,7 +289,6 @@ end)
 -- FAKE LAG
 ----------------------------------------------------------------
 local FakeLagEnabled = false
-local FakeLagAmount = 0.3
 
 FakeLagTab:CreateToggle({
 	Name = "ENABLE FAKE LAG",
@@ -300,16 +299,6 @@ FakeLagTab:CreateToggle({
 		if not v then
 			settings().Network.IncomingReplicationLag = 0
 		end
-	end,
-})
-
-FakeLagTab:CreateSlider({
-	Name = "FAKE LAG AMOUNT",
-	Range = {0, 2},
-	Increment = 0.05,
-	CurrentValue = 0.3,
-	Callback = function(v)
-		FakeLagAmount = v
 	end,
 })
 
@@ -327,13 +316,11 @@ FakeLagTab:CreateKeybind({
 
 task.spawn(function()
 	while true do
-		task.wait(0.1)
+		task.wait()
 
 		if FakeLagEnabled then
-			settings().Network.IncomingReplicationLag = FakeLagAmount
-
-			task.wait(0.05)
-
+			settings().Network.IncomingReplicationLag = 0.35
+		else
 			settings().Network.IncomingReplicationLag = 0
 		end
 	end
