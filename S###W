@@ -1,264 +1,429 @@
-```lua
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 local Window = Rayfield:CreateWindow({
-	Name = "SAML HUB",
-	LoadingTitle = "CARREGANDO...",
-	LoadingSubtitle = "by SAMLLEAKS",
-	ConfigurationSaving = {
-		Enabled = true,
-		FileName = "Big Hub"
-	},
+    Name = "SAML HUB",
+    Icon = 0,
+    LoadingTitle = "CARREGANDO...",
+    LoadingSubtitle = "by SAMLLEAKS",
+    ConfigurationSaving = { Enabled = true, FolderName = nil, FileName = "Big Hub" },
+    KeySystem = false,
 })
 
--- VARIÁVEIS
-local  ArmScale, HeadScale = 1,1,1
-local LegColorMode, ArmColorMode, HeadColorMode = false,false,false
-
-local LegColor = Color3.fromRGB(0,0,0)
-local ArmColor = Color3.fromRGB(0,0,0)
-local HeadColor = Color3.fromRGB(0,0,0)
-
-local LegTransparency, ArmTransparency, HeadTransparency = 0,0,0
-
-local v_legSize = Vector3.new(1.6,2,1.4)
+-- Valores padrão
+local v_headMeshScale = Vector3.new(0.275, 0.275, 0.275)
 local v_legMeshID = "rbxassetid://109302786609504"
+local v_legTexture = "rbxassetid://15901064828"
 
-local Tab = Window:CreateTab("Main")
-local ArmsTab = Window:CreateTab("Arms")
-local LegTab = Window:CreateTab("Legs")
-local HeadTab = Window:CreateTab("Head")
+-- Tamanhos configuráveis
+local legSize = 2
+local armSize = 2
+local headSize = 2
+
+-- Cores e transparência
+local legColor = Color3.fromRGB(255, 255, 255)
+local armColor = Color3.fromRGB(255, 255, 255)
+local headColor = Color3.fromRGB(255, 255, 255)
+
+local legTransparent = false
+local armTransparent = false
+local headTransparent = false
+
+local legEnabled = false
+local armEnabled = false
+local headEnabled = false
+
+local Tab = Window:CreateTab("SAML LEAKS", 4483362458)
+local ArmsTab = Window:CreateTab("Arms", 84545033532370)
+local LegTab = Window:CreateTab("Legs", 79244816732976)
+local HeadTab = Window:CreateTab("Head", 74460027428660)
+local BallTab = Window:CreateTab("Ball", 101881060418088)
+local FakeLagTab = Window:CreateTab("Fake Lag", 7734053495)
 
 local function GetChar()
-	return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local p = LocalPlayer
+    return p.Character or p.CharacterAdded:Wait()
 end
 
---------------------------------------------------
--- LEGS
---------------------------------------------------
--- VARS
-local LegScale = 1
-local LegColorMode = false
-local LegColor = Color3.fromRGB(0,0,0)
-local LegTransparency = 0
+----------------------------------------------------------------
+-- FUNÇÕES AUXILIARES
+----------------------------------------------------------------
+
+local function ApplyLeg()
+    local char = GetChar()
+    local rLeg = char:FindFirstChild("Right Leg")
+    local lLeg = char:FindFirstChild("Left Leg")
+    if not rLeg or not lLeg then return end
+
+    for _, leg in pairs({rLeg, lLeg}) do
+        if legTransparent then
+            -- Remove mesh, aplica transparência e cor
+            if leg:FindFirstChild("SAML_Mesh") then leg.SAML_Mesh:Destroy() end
+            leg.Transparency = 0.5
+            leg.Color = legColor
+        else
+            -- Aplica mesh
+            local mesh = leg:FindFirstChild("SAML_Mesh") or Instance.new("SpecialMesh", leg)
+            mesh.Name = "SAML_Mesh"
+            mesh.MeshId = v_legMeshID
+            mesh.Scale = Vector3.new(1, 1, 1)
+            leg.Transparency = 0
+            leg.Color = legColor
+        end
+        leg.Size = Vector3.new(legSize, 2, legSize)
+    end
+end
+
+local function ResetLeg()
+    local char = GetChar()
+    local rLeg = char:FindFirstChild("Right Leg")
+    local lLeg = char:FindFirstChild("Left Leg")
+    if not rLeg or not lLeg then return end
+    for _, leg in pairs({rLeg, lLeg}) do
+        if leg:FindFirstChild("SAML_Mesh") then leg.SAML_Mesh:Destroy() end
+        leg.Size = Vector3.new(1, 2, 1)
+        leg.Transparency = 0
+        leg.Color = Color3.fromRGB(163, 162, 165)
+    end
+end
+
+local function ApplyArm()
+    local char = GetChar()
+    local rArm = char:FindFirstChild("Right Arm")
+    local lArm = char:FindFirstChild("Left Arm")
+    if not rArm or not lArm then return end
+
+    for _, arm in pairs({rArm, lArm}) do
+        if armTransparent then
+            if arm:FindFirstChild("SAML_ArmMesh") then arm.SAML_ArmMesh:Destroy() end
+            arm.Transparency = 0.5
+            arm.Color = armColor
+        else
+            local mesh = arm:FindFirstChild("SAML_ArmMesh") or Instance.new("SpecialMesh", arm)
+            mesh.Name = "SAML_ArmMesh"
+            mesh.MeshId = "rbxassetid://113784110775765"
+            arm.Transparency = 0
+            arm.Color = armColor
+        end
+        arm.Size = Vector3.new(armSize * 2, armSize * 2, armSize)
+    end
+end
+
+local function ResetArm()
+    local char = GetChar()
+    local rArm = char:FindFirstChild("Right Arm")
+    local lArm = char:FindFirstChild("Left Arm")
+    if not rArm or not lArm then return end
+    for _, arm in pairs({rArm, lArm}) do
+        if arm:FindFirstChild("SAML_ArmMesh") then arm.SAML_ArmMesh:Destroy() end
+        arm.Size = Vector3.new(1, 2, 1)
+        arm.Transparency = 0
+        arm.Color = Color3.fromRGB(163, 162, 165)
+    end
+end
+
+local function ApplyHead()
+    local char = GetChar()
+    local head = char:FindFirstChild("Head")
+    if not head then return end
+
+    if headTransparent then
+        local m = head:FindFirstChildOfClass("SpecialMesh")
+        if m then m.Scale = Vector3.new(0.001, 0.001, 0.001) end
+        head.Transparency = 0.5
+        head.Color = headColor
+    else
+        head.Transparency = 0
+        head.Color = headColor
+        local m = head:FindFirstChildOfClass("SpecialMesh")
+        if m then m.Scale = v_headMeshScale end
+    end
+    head.Size = Vector3.new(headSize, headSize * 0.5, headSize * 0.5)
+    head.CanCollide = false
+end
+
+local function ResetHead()
+    local char = GetChar()
+    local head = char:FindFirstChild("Head")
+    if not head then return end
+    head.Size = Vector3.new(2, 1, 1)
+    head.CanCollide = true
+    head.Transparency = 0
+    head.Color = Color3.fromRGB(163, 162, 165)
+    local m = head:FindFirstChildOfClass("SpecialMesh")
+    if m then m.Scale = Vector3.new(1.25, 1.25, 1.25) end
+end
+
+----------------------------------------------------------------
+-- LEGS TAB
+----------------------------------------------------------------
 
 local LegToggle = LegTab:CreateToggle({
-	Name = "BIGFOOT SAML",
-	CurrentValue = false,
-	Callback = function(Value)
-		local char = GetChar()
-		local rLeg = char:FindFirstChild("Right Leg")
-		local lLeg = char:FindFirstChild("Left Leg")
-		if not rLeg or not lLeg then return end
-
-		for _, leg in pairs({rLeg, lLeg}) do
-			if Value then
-				if LegColorMode then
-					if leg:FindFirstChild("SAML_Mesh") then
-						leg.SAML_Mesh:Destroy()
-					end
-					leg.Color = LegColor
-					leg.Transparency = LegTransparency
-				else
-					local mesh = leg:FindFirstChild("SAML_Mesh")
-					if not mesh then
-						mesh = Instance.new("SpecialMesh")
-						mesh.Name = "SAML_Mesh"
-						mesh.MeshId = v_legMeshID
-						mesh.Parent = leg
-					end
-
-					leg.Color = Color3.new(1,1,1)
-					leg.Transparency = 0
-				end
-
-				leg.Size = v_legSize * LegScale
-			else
-				if leg:FindFirstChild("SAML_Mesh") then
-					leg.SAML_Mesh:Destroy()
-				end
-				leg.Size = Vector3.new(1,2,1)
-				leg.Transparency = 0
-			end
-		end
-	end,
+    Name = "BIGFOOT SAML",
+    CurrentValue = false,
+    Callback = function(Value)
+        legEnabled = Value
+        if Value then ApplyLeg() else ResetLeg() end
+    end,
 })
 
--- SLIDER
 LegTab:CreateSlider({
-	Name = "Leg Size",
-	Range = {1,5},
-	Increment = 0.1,
-	CurrentValue = 1,
-	Callback = function(v)
-		LegScale = v
-	end,
-})
-
--- COLOR MODE
-LegTab:CreateToggle({
-	Name = "Leg Color Mode",
-	CurrentValue = false,
-	Callback = function(v)
-		LegColorMode = v
-	end,
+    Name = "Tamanho da Perna",
+    Range = {1, 15},
+    Increment = 0.5,
+    CurrentValue = 2,
+    Callback = function(Value)
+        legSize = Value
+        if legEnabled then ApplyLeg() end
+    end,
 })
 
 LegTab:CreateColorPicker({
-	Name = "Leg Color",
-	Color = LegColor,
-	Callback = function(v)
-		LegColor = v
-	end,
+    Name = "Cor da Perna",
+    Color = legColor,
+    Callback = function(Value)
+        legColor = Value
+        if legEnabled then ApplyLeg() end
+    end,
 })
 
-LegTab:CreateSlider({
-	Name = "Leg Transparency",
-	Range = {0,1},
-	Increment = 0.05,
-	CurrentValue = 0,
-	Callback = function(v)
-		LegTransparency = v
-	end,
+LegTab:CreateToggle({
+    Name = "Transparente (sem mesh)",
+    CurrentValue = false,
+    Callback = function(Value)
+        legTransparent = Value
+        if legEnabled then ApplyLeg() end
+    end,
 })
---------------------------------------------------
--- ARMS
---------------------------------------------------
+
+LegTab:CreateKeybind({
+    Name = "SAML BIGFOOT KEY",
+    CurrentKeybind = "I",
+    Callback = function()
+        LegToggle:Set(not LegToggle.CurrentValue)
+    end,
+})
+
+----------------------------------------------------------------
+-- ARMS TAB
+----------------------------------------------------------------
+
 local ArmToggle = ArmsTab:CreateToggle({
-	Name = "BIG ARMS",
-	CurrentValue = false,
-	Callback = function(Value)
-		local char = GetChar()
-		local r = char:FindFirstChild("Right Arm")
-		local l = char:FindFirstChild("Left Arm")
-
-		for _, arm in pairs({r,l}) do
-			if arm then
-				if Value then
-					if ArmColorMode then
-						for _,v in pairs(arm:GetChildren()) do
-							if v:IsA("SpecialMesh") then v:Destroy() end
-						end
-						arm.Color = ArmColor
-						arm.Transparency = ArmTransparency
-					else
-						local mesh = Instance.new("SpecialMesh", arm)
-						mesh.MeshId = "rbxassetid://113784110775765"
-						arm.Color = Color3.new(1,1,1)
-						arm.Transparency = 0
-					end
-
-					arm.Size = Vector3.new(1,2,1) * ArmScale * 3
-				else
-					for _,v in pairs(arm:GetChildren()) do
-						if v:IsA("SpecialMesh") then v:Destroy() end
-					end
-					arm.Size = Vector3.new(1,2,1)
-					arm.Transparency = 0
-				end
-			end
-		end
-	end,
+    Name = "AUTO CATCH SAML",
+    CurrentValue = false,
+    Callback = function(Value)
+        armEnabled = Value
+        if Value then ApplyArm() else ResetArm() end
+    end,
 })
 
 ArmsTab:CreateSlider({
-	Name = "Arm Size",
-	Range = {1,5},
-	Increment = 0.1,
-	CurrentValue = 1,
-	Callback = function(v)
-		ArmScale = v
-	end,
-})
-
-ArmsTab:CreateToggle({
-	Name = "Arm Color Mode",
-	CurrentValue = false,
-	Callback = function(v)
-		ArmColorMode = v
-	end,
+    Name = "Tamanho do Braço",
+    Range = {1, 15},
+    Increment = 0.5,
+    CurrentValue = 2,
+    Callback = function(Value)
+        armSize = Value
+        if armEnabled then ApplyArm() end
+    end,
 })
 
 ArmsTab:CreateColorPicker({
-	Name = "Arm Color",
-	Color = ArmColor,
-	Callback = function(v)
-		ArmColor = v
-	end,
+    Name = "Cor do Braço",
+    Color = armColor,
+    Callback = function(Value)
+        armColor = Value
+        if armEnabled then ApplyArm() end
+    end,
 })
 
-ArmsTab:CreateSlider({
-	Name = "Arm Transparency",
-	Range = {0,1},
-	Increment = 0.05,
-	CurrentValue = 0,
-	Callback = function(v)
-		ArmTransparency = v
-	end,
+ArmsTab:CreateToggle({
+    Name = "Transparente (sem mesh)",
+    CurrentValue = false,
+    Callback = function(Value)
+        armTransparent = Value
+        if armEnabled then ApplyArm() end
+    end,
 })
 
---------------------------------------------------
--- HEAD
---------------------------------------------------
+ArmsTab:CreateKeybind({
+    Name = "AUTO CATCH KEY",
+    CurrentKeybind = "U",
+    Callback = function()
+        ArmToggle:Set(not ArmToggle.CurrentValue)
+    end,
+})
+
+----------------------------------------------------------------
+-- HEAD TAB
+----------------------------------------------------------------
+
 local HeadToggle = HeadTab:CreateToggle({
-	Name = "BIG HEAD",
-	CurrentValue = false,
-	Callback = function(Value)
-		local head = GetChar():FindFirstChild("Head")
-		if not head then return end
-
-		if Value then
-			if HeadColorMode then
-				head.Color = HeadColor
-				head.Transparency = HeadTransparency
-			else
-				head.Transparency = 0
-			end
-
-			head.Size = Vector3.new(2,1,1) * HeadScale * 2
-		else
-			head.Size = Vector3.new(2,1,1)
-			head.Transparency = 0
-		end
-	end,
+    Name = "BIG HEAD SAML",
+    CurrentValue = false,
+    Callback = function(Value)
+        headEnabled = Value
+        if Value then ApplyHead() else ResetHead() end
+    end,
 })
 
 HeadTab:CreateSlider({
-	Name = "Head Size",
-	Range = {1,5},
-	Increment = 0.1,
-	CurrentValue = 1,
-	Callback = function(v)
-		HeadScale = v
-	end,
-})
-
-HeadTab:CreateToggle({
-	Name = "Head Color Mode",
-	CurrentValue = false,
-	Callback = function(v)
-		HeadColorMode = v
-	end,
+    Name = "Tamanho da Cabeça",
+    Range = {1, 15},
+    Increment = 0.5,
+    CurrentValue = 2,
+    Callback = function(Value)
+        headSize = Value
+        if headEnabled then ApplyHead() end
+    end,
 })
 
 HeadTab:CreateColorPicker({
-	Name = "Head Color",
-	Color = HeadColor,
-	Callback = function(v)
-		HeadColor = v
-	end,
+    Name = "Cor da Cabeça",
+    Color = headColor,
+    Callback = function(Value)
+        headColor = Value
+        if headEnabled then ApplyHead() end
+    end,
 })
 
-HeadTab:CreateSlider({
-	Name = "Head Transparency",
-	Range = {0,1},
-	Increment = 0.05,
-	CurrentValue = 0,
-	Callback = function(v)
-		HeadTransparency = v
-	end,
+HeadTab:CreateToggle({
+    Name = "Transparente (sem mesh)",
+    CurrentValue = false,
+    Callback = function(Value)
+        headTransparent = Value
+        if headEnabled then ApplyHead() end
+    end,
 })
-```
+
+HeadTab:CreateKeybind({
+    Name = "SAML BIGHEAD KEY",
+    CurrentKeybind = "H",
+    Callback = function()
+        HeadToggle:Set(not HeadToggle.CurrentValue)
+    end,
+})
+
+----------------------------------------------------------------
+-- SPEED
+----------------------------------------------------------------
+
+Tab:CreateSlider({
+    Name = "SAML WALKSPEED",
+    Range = {16, 100},
+    Increment = 1,
+    CurrentValue = 16,
+    Callback = function(Value)
+        local hum = GetChar():FindFirstChild("Humanoid")
+        if hum then hum.WalkSpeed = Value end
+    end,
+})
+
+----------------------------------------------------------------
+-- BALL PREDICTION
+----------------------------------------------------------------
+
+local BallPredictionEnabled = false
+local BallPredColor = Color3.fromRGB(255, 255, 255)
+local BallPredSize = 0.1
+local BallPredAccuracy = 5
+local BallPredRefresh = 0.1
+local BallPredThreshold = 25
+local BallPredDump = {}
+
+local function quadraticSolver(a, b, c)
+    local x1 = (-b + math.sqrt(b * b - 4 * a * c)) / (2 * a)
+    local x2 = (-b - math.sqrt(b * b - 4 * a * c)) / (2 * a)
+    return (x2 > x1 and x2 or x1)
+end
+
+local function findLandingPosition(vel, pos, acc, accu)
+    local t = quadraticSolver(0.5 * -acc, vel.Y, pos.Y)
+    return pos + Vector3.new(vel.X * t, -acc * (t * t) / 2 + vel.Y * t, vel.Z * t)
+end
+
+BallTab:CreateToggle({ Name = "BALL PREDICTION", CurrentValue = false, Callback = function(v) BallPredictionEnabled = v end })
+BallTab:CreateColorPicker({ Name = "Ball Prediction Color", Color = BallPredColor, Callback = function(v) BallPredColor = v end })
+BallTab:CreateSlider({ Name = "Trail Size", Range = {0.01, 0.5}, Increment = 0.01, CurrentValue = 0.1, Callback = function(v) BallPredSize = v end })
+BallTab:CreateSlider({ Name = "Prediction Accuracy", Range = {1, 10}, Increment = 1, CurrentValue = 5, Callback = function(v) BallPredAccuracy = v end })
+BallTab:CreateSlider({ Name = "Refresh Rate", Range = {0.05, 1}, Increment = 0.05, CurrentValue = 0.1, Callback = function(v) BallPredRefresh = v end })
+BallTab:CreateSlider({ Name = "Velocity Threshold", Range = {0, 100}, Increment = 1, CurrentValue = 25, Callback = function(v) BallPredThreshold = v end })
+
+task.spawn(function()
+    while true do
+        task.wait(BallPredRefresh)
+        for _, i in pairs(BallPredDump) do if i then i:Destroy() end end
+        table.clear(BallPredDump)
+        if not BallPredictionEnabled then continue end
+        local BallsFolder = workspace:WaitForChild("Debris"):WaitForChild("Balls")
+        for _, obj in pairs(BallsFolder:GetChildren()) do
+            if obj:IsA("BasePart") and obj.AssemblyLinearVelocity.Magnitude > BallPredThreshold then
+                local land = findLandingPosition(obj.AssemblyLinearVelocity, obj.Position, workspace.Gravity, BallPredAccuracy)
+                local a0 = Instance.new("Attachment", workspace.Terrain)
+                a0.WorldPosition = obj.Position
+                local a1 = Instance.new("Attachment", workspace.Terrain)
+                a1.WorldPosition = land
+                local beam = Instance.new("Beam")
+                beam.Attachment0 = a0
+                beam.Attachment1 = a1
+                beam.Width0 = BallPredSize
+                beam.Width1 = BallPredSize
+                beam.FaceCamera = true
+                beam.Color = ColorSequence.new(BallPredColor)
+                beam.Parent = obj
+                table.insert(BallPredDump, a0)
+                table.insert(BallPredDump, a1)
+                table.insert(BallPredDump, beam)
+            end
+        end
+    end
+end)
+
+----------------------------------------------------------------
+-- FAKE LAG
+----------------------------------------------------------------
+
+local FakeLagEnabled = false
+
+FakeLagTab:CreateToggle({
+    Name = "ENABLE FAKE LAG",
+    CurrentValue = false,
+    Callback = function(v)
+        FakeLagEnabled = v
+        if not v then settings().Network.IncomingReplicationLag = 0 end
+    end,
+})
+
+FakeLagTab:CreateKeybind({
+    Name = "FAKE LAG KEY",
+    CurrentKeybind = "P",
+    Callback = function()
+        FakeLagEnabled = not FakeLagEnabled
+        if not FakeLagEnabled then settings().Network.IncomingReplicationLag = 0 end
+    end,
+})
+local Fa
+keLagAmount = 0.35
+
+FakeLagTab:CreateSlider({
+    Name = "Intensidade do Fake Lag",
+    Range = {0.05, 1},
+    Increment = 0.05,
+    CurrentValue = 0.35,
+    Callback = function(v)
+        FakeLagAmount = v
+    end,
+})
+
+task.spawn(function()
+    while true do
+        task.wait()
+        if FakeLagEnabled then
+            settings().Network.IncomingReplicationLag = FakeLagAmount
+        else
+            settings().Network.IncomingReplicationLag = 0
+        end
+    end
+end)
