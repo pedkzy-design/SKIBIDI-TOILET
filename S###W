@@ -15,7 +15,7 @@ local Window = Rayfield:CreateWindow({
 })
 
 -- VARIÁVEIS
-local LegScale, ArmScale, HeadScale = 1,1,1
+local  ArmScale, HeadScale = 1,1,1
 local LegColorMode, ArmColorMode, HeadColorMode = false,false,false
 
 local LegColor = Color3.fromRGB(0,0,0)
