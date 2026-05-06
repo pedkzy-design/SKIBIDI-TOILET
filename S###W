@@ -39,8 +39,14 @@ end
 --------------------------------------------------
 -- LEGS
 --------------------------------------------------
+-- VARS
+local LegScale = 1
+local LegColorMode = false
+local LegColor = Color3.fromRGB(0,0,0)
+local LegTransparency = 0
+
 local LegToggle = LegTab:CreateToggle({
-	Name = "BIGFOOT",
+	Name = "BIGFOOT SAML",
 	CurrentValue = false,
 	Callback = function(Value)
 		local char = GetChar()
@@ -51,22 +57,28 @@ local LegToggle = LegTab:CreateToggle({
 		for _, leg in pairs({rLeg, lLeg}) do
 			if Value then
 				if LegColorMode then
-					if leg:FindFirstChild("Mesh") then
-						leg.Mesh:Destroy()
+					if leg:FindFirstChild("SAML_Mesh") then
+						leg.SAML_Mesh:Destroy()
 					end
 					leg.Color = LegColor
 					leg.Transparency = LegTransparency
 				else
-					local mesh = Instance.new("SpecialMesh", leg)
-					mesh.MeshId = v_legMeshID
+					local mesh = leg:FindFirstChild("SAML_Mesh")
+					if not mesh then
+						mesh = Instance.new("SpecialMesh")
+						mesh.Name = "SAML_Mesh"
+						mesh.MeshId = v_legMeshID
+						mesh.Parent = leg
+					end
+
 					leg.Color = Color3.new(1,1,1)
 					leg.Transparency = 0
 				end
 
 				leg.Size = v_legSize * LegScale
 			else
-				for _,v in pairs(leg:GetChildren()) do
-					if v:IsA("SpecialMesh") then v:Destroy() end
+				if leg:FindFirstChild("SAML_Mesh") then
+					leg.SAML_Mesh:Destroy()
 				end
 				leg.Size = Vector3.new(1,2,1)
 				leg.Transparency = 0
@@ -75,6 +87,7 @@ local LegToggle = LegTab:CreateToggle({
 	end,
 })
 
+-- SLIDER
 LegTab:CreateSlider({
 	Name = "Leg Size",
 	Range = {1,5},
@@ -85,6 +98,7 @@ LegTab:CreateSlider({
 	end,
 })
 
+-- COLOR MODE
 LegTab:CreateToggle({
 	Name = "Leg Color Mode",
 	CurrentValue = false,
@@ -110,7 +124,6 @@ LegTab:CreateSlider({
 		LegTransparency = v
 	end,
 })
-
 --------------------------------------------------
 -- ARMS
 --------------------------------------------------
