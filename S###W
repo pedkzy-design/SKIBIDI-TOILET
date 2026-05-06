@@ -12,43 +12,52 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false,
 })
 
--- Valores padrão
 local v_headMeshScale = Vector3.new(0.275, 0.275, 0.275)
-local v_legMeshID = "rbxassetid://109302786609504"
-local v_legTexture = "rbxassetid://15901064828"
+local v_legMeshID     = "rbxassetid://109302786609504"
+local v_armMeshID     = "rbxassetid://113784110775765"
 
--- Tamanhos configuráveis
-local legSize = 2
-local armSize = 2
+local legSize  = 2
+local armSize  = 2
 local headSize = 2
 
--- Cores e transparência
-local legColor = Color3.fromRGB(255, 255, 255)
-local armColor = Color3.fromRGB(255, 255, 255)
+local legColor  = Color3.fromRGB(255, 255, 255)
+local armColor  = Color3.fromRGB(255, 255, 255)
 local headColor = Color3.fromRGB(255, 255, 255)
 
-local legTransparent = false
-local armTransparent = false
+local legTransparent  = false
+local armTransparent  = false
 local headTransparent = false
 
-local legEnabled = false
-local armEnabled = false
+local legEnabled  = false
+local armEnabled  = false
 local headEnabled = false
 
-local Tab = Window:CreateTab("SAML LEAKS", 4483362458)
-local ArmsTab = Window:CreateTab("Arms", 84545033532370)
-local LegTab = Window:CreateTab("Legs", 79244816732976)
-local HeadTab = Window:CreateTab("Head", 74460027428660)
-local BallTab = Window:CreateTab("Ball", 101881060418088)
+local legCustomMeshID    = ""
+local legCustomTextureID = ""
+local armCustomMeshID    = ""
+local armCustomTextureID = ""
+
+local Tab        = Window:CreateTab("SAML LEAKS", 4483362458)
+local ArmsTab    = Window:CreateTab("Arms", 84545033532370)
+local LegTab     = Window:CreateTab("Legs", 79244816732976)
+local HeadTab    = Window:CreateTab("Head", 74460027428660)
+local BallTab    = Window:CreateTab("Ball", 101881060418088)
 local FakeLagTab = Window:CreateTab("Fake Lag", 7734053495)
 
 local function GetChar()
-    local p = LocalPlayer
-    return p.Character or p.CharacterAdded:Wait()
+    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+end
+
+local function sanitizeID(id)
+    if id == "" or id == nil then return nil end
+    -- aceita tanto o ID puro quanto rbxassetid://...
+    if id:match("^rbxassetid://") then return id end
+    if id:match("^%d+$") then return "rbxassetid://" .. id end
+    return nil
 end
 
 ----------------------------------------------------------------
--- FUNÇÕES AUXILIARES
+-- LEGS
 ----------------------------------------------------------------
 
 local function ApplyLeg()
@@ -59,16 +68,18 @@ local function ApplyLeg()
 
     for _, leg in pairs({rLeg, lLeg}) do
         if legTransparent then
-            -- Remove mesh, aplica transparência e cor
             if leg:FindFirstChild("SAML_Mesh") then leg.SAML_Mesh:Destroy() end
             leg.Transparency = 0.5
             leg.Color = legColor
         else
-            -- Aplica mesh
             local mesh = leg:FindFirstChild("SAML_Mesh") or Instance.new("SpecialMesh", leg)
             mesh.Name = "SAML_Mesh"
-            mesh.MeshId = v_legMeshID
-            mesh.Scale = Vector3.new(1, 1, 1)
+
+            local meshID    = sanitizeID(legCustomMeshID)
+            local texID     = sanitizeID(legCustomTextureID)
+            mesh.MeshId     = meshID    or v_legMeshID
+            mesh.TextureId  = texID     or ""
+            mesh.Scale      = Vector3.new(1, 1, 1)
             leg.Transparency = 0
             leg.Color = legColor
         end
@@ -89,6 +100,10 @@ local function ResetLeg()
     end
 end
 
+----------------------------------------------------------------
+-- ARMS
+----------------------------------------------------------------
+
 local function ApplyArm()
     local char = GetChar()
     local rArm = char:FindFirstChild("Right Arm")
@@ -103,7 +118,11 @@ local function ApplyArm()
         else
             local mesh = arm:FindFirstChild("SAML_ArmMesh") or Instance.new("SpecialMesh", arm)
             mesh.Name = "SAML_ArmMesh"
-            mesh.MeshId = "rbxassetid://113784110775765"
+
+            local meshID    = sanitizeID(armCustomMeshID)
+            local texID     = sanitizeID(armCustomTextureID)
+            mesh.MeshId     = meshID or v_armMeshID
+            mesh.TextureId  = texID  or ""
             arm.Transparency = 0
             arm.Color = armColor
         end
@@ -124,11 +143,14 @@ local function ResetArm()
     end
 end
 
+----------------------------------------------------------------
+-- HEAD
+----------------------------------------------------------------
+
 local function ApplyHead()
     local char = GetChar()
     local head = char:FindFirstChild("Head")
     if not head then return end
-
     if headTransparent then
         local m = head:FindFirstChildOfClass("SpecialMesh")
         if m then m.Scale = Vector3.new(0.001, 0.001, 0.001) end
@@ -157,7 +179,7 @@ local function ResetHead()
 end
 
 ----------------------------------------------------------------
--- LEGS TAB
+-- LEGS TAB UI
 ----------------------------------------------------------------
 
 local LegToggle = LegTab:CreateToggle({
@@ -171,9 +193,7 @@ local LegToggle = LegTab:CreateToggle({
 
 LegTab:CreateSlider({
     Name = "Tamanho da Perna",
-    Range = {1, 15},
-    Increment = 0.5,
-    CurrentValue = 2,
+    Range = {1, 15}, Increment = 0.5, CurrentValue = 2,
     Callback = function(Value)
         legSize = Value
         if legEnabled then ApplyLeg() end
@@ -198,6 +218,26 @@ LegTab:CreateToggle({
     end,
 })
 
+LegTab:CreateInput({
+    Name = "Mesh ID da Perna",
+    PlaceholderText = "Ex: 109302786609504 (deixe vazio para padrão)",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Value)
+        legCustomMeshID = Value
+        if legEnabled then ApplyLeg() end
+    end,
+})
+
+LegTab:CreateInput({
+    Name = "Texture ID da Perna",
+    PlaceholderText = "Ex: 15901064828 (deixe vazio para sem textura)",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Value)
+        legCustomTextureID = Value
+        if legEnabled then ApplyLeg() end
+    end,
+})
+
 LegTab:CreateKeybind({
     Name = "SAML BIGFOOT KEY",
     CurrentKeybind = "I",
@@ -207,7 +247,7 @@ LegTab:CreateKeybind({
 })
 
 ----------------------------------------------------------------
--- ARMS TAB
+-- ARMS TAB UI
 ----------------------------------------------------------------
 
 local ArmToggle = ArmsTab:CreateToggle({
@@ -221,9 +261,7 @@ local ArmToggle = ArmsTab:CreateToggle({
 
 ArmsTab:CreateSlider({
     Name = "Tamanho do Braço",
-    Range = {1, 15},
-    Increment = 0.5,
-    CurrentValue = 2,
+    Range = {1, 15}, Increment = 0.5, CurrentValue = 2,
     Callback = function(Value)
         armSize = Value
         if armEnabled then ApplyArm() end
@@ -248,6 +286,26 @@ ArmsTab:CreateToggle({
     end,
 })
 
+ArmsTab:CreateInput({
+    Name = "Mesh ID do Braço",
+    PlaceholderText = "Ex: 113784110775765 (deixe vazio para padrão)",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Value)
+        armCustomMeshID = Value
+        if armEnabled then ApplyArm() end
+    end,
+})
+
+ArmsTab:CreateInput({
+    Name = "Texture ID do Braço",
+    PlaceholderText = "Ex: 15901064828 (deixe vazio para sem textura)",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Value)
+        armCustomTextureID = Value
+        if armEnabled then ApplyArm() end
+    end,
+})
+
 ArmsTab:CreateKeybind({
     Name = "AUTO CATCH KEY",
     CurrentKeybind = "U",
@@ -257,7 +315,7 @@ ArmsTab:CreateKeybind({
 })
 
 ----------------------------------------------------------------
--- HEAD TAB
+-- HEAD TAB UI
 ----------------------------------------------------------------
 
 local HeadToggle = HeadTab:CreateToggle({
@@ -271,9 +329,7 @@ local HeadToggle = HeadTab:CreateToggle({
 
 HeadTab:CreateSlider({
     Name = "Tamanho da Cabeça",
-    Range = {1, 15},
-    Increment = 0.5,
-    CurrentValue = 2,
+    Range = {1, 15}, Increment = 0.5, CurrentValue = 2,
     Callback = function(Value)
         headSize = Value
         if headEnabled then ApplyHead() end
@@ -312,9 +368,7 @@ HeadTab:CreateKeybind({
 
 Tab:CreateSlider({
     Name = "SAML WALKSPEED",
-    Range = {16, 100},
-    Increment = 1,
-    CurrentValue = 16,
+    Range = {16, 100}, Increment = 1, CurrentValue = 16,
     Callback = function(Value)
         local hum = GetChar():FindFirstChild("Humanoid")
         if hum then hum.WalkSpeed = Value end
@@ -325,67 +379,217 @@ Tab:CreateSlider({
 -- BALL PREDICTION
 ----------------------------------------------------------------
 
-local BallPredictionEnabled = false
-local BallPredColor = Color3.fromRGB(255, 255, 255)
-local BallPredSize = 0.1
-local BallPredAccuracy = 5
-local BallPredRefresh = 0.1
-local BallPredThreshold = 25
-local BallPredDump = {}
+local STEPS     = 80
+local STEP_SIZE = 0.05
+local GRAVITY   = Vector3.new(0, -workspace.Gravity, 0)
+local BALL_RADIUS = 1.5
 
-local function quadraticSolver(a, b, c)
-    local x1 = (-b + math.sqrt(b * b - 4 * a * c)) / (2 * a)
-    local x2 = (-b - math.sqrt(b * b - 4 * a * c)) / (2 * a)
-    return (x2 > x1 and x2 or x1)
+local predEnabled  = false
+local beamColor    = ColorSequence.new(Color3.fromRGB(255, 100, 0), Color3.fromRGB(255, 255, 0))
+local beamWidth0   = 0.15
+local beamWidth1   = 0.05
+local bounceColor  = Color3.fromRGB(0, 200, 255)
+local bounceSize   = Vector3.new(1.5, 1.5, 1.5)
+local bounceTransp = 0.5
+
+local beamFolder = Instance.new("Folder")
+beamFolder.Name  = "BallPredictions"
+beamFolder.Parent = workspace
+
+local ballData = {}
+
+local raycastParams = RaycastParams.new()
+raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+
+local function getBallsFolder()
+    return workspace:FindFirstChild("Debris")
+        and workspace.Debris:FindFirstChild("Balls")
 end
 
-local function findLandingPosition(vel, pos, acc, accu)
-    local t = quadraticSolver(0.5 * -acc, vel.Y, pos.Y)
-    return pos + Vector3.new(vel.X * t, -acc * (t * t) / 2 + vel.Y * t, vel.Z * t)
+local function createIndicatorBall()
+    local part = Instance.new("Part")
+    part.Size         = bounceSize
+    part.Color        = bounceColor
+    part.Transparency = 1
+    part.Anchored     = true
+    part.CanCollide   = false
+    part.CanQuery     = false
+    part.CastShadow   = false
+    part.Material     = Enum.Material.Neon
+    part.Parent       = beamFolder
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshType = Enum.MeshType.Sphere
+    mesh.Parent   = part
+    return part
 end
 
-BallTab:CreateToggle({ Name = "BALL PREDICTION", CurrentValue = false, Callback = function(v) BallPredictionEnabled = v end })
-BallTab:CreateColorPicker({ Name = "Ball Prediction Color", Color = BallPredColor, Callback = function(v) BallPredColor = v end })
-BallTab:CreateSlider({ Name = "Trail Size", Range = {0.01, 0.5}, Increment = 0.01, CurrentValue = 0.1, Callback = function(v) BallPredSize = v end })
-BallTab:CreateSlider({ Name = "Prediction Accuracy", Range = {1, 10}, Increment = 1, CurrentValue = 5, Callback = function(v) BallPredAccuracy = v end })
-BallTab:CreateSlider({ Name = "Refresh Rate", Range = {0.05, 1}, Increment = 0.05, CurrentValue = 0.1, Callback = function(v) BallPredRefresh = v end })
-BallTab:CreateSlider({ Name = "Velocity Threshold", Range = {0, 100}, Increment = 1, CurrentValue = 25, Callback = function(v) BallPredThreshold = v end })
+local function createDataForBall(ball)
+    local data = {}
+    local attachments = {}
+    for i = 1, STEPS do
+        local att = Instance.new("Attachment")
+        att.Parent = workspace.Terrain
+        attachments[i] = att
+    end
+    local beams = {}
+    for i = 1, STEPS - 1 do
+        local beam = Instance.new("Beam")
+        beam.Attachment0 = attachments[i]
+        beam.Attachment1 = attachments[i + 1]
+        beam.Color       = beamColor
+        beam.Width0      = beamWidth0
+        beam.Width1      = beamWidth1
+        beam.FaceCamera  = true
+        beam.Segments    = 1
+        beam.Parent      = beamFolder
+        beams[i] = beam
+    end
+    data.attachments = attachments
+    data.beams       = beams
+    data.ballBounce  = createIndicatorBall()
+    data.connection  = ball.AncestryChanged:Connect(function()
+        if not ball:IsDescendantOf(workspace) then
+            if ballData[ball] then
+                for _, att  in ipairs(ballData[ball].attachments) do att:Destroy()  end
+                for _, beam in ipairs(ballData[ball].beams)       do beam:Destroy() end
+                ballData[ball].ballBounce:Destroy()
+                ballData[ball].connection:Disconnect()
+                ballData[ball] = nil
+            end
+        end
+    end)
+    return data
+end
 
-task.spawn(function()
-    while true do
-        task.wait(BallPredRefresh)
-        for _, i in pairs(BallPredDump) do if i then i:Destroy() end end
-        table.clear(BallPredDump)
-        if not BallPredictionEnabled then continue end
-        local BallsFolder = workspace:WaitForChild("Debris"):WaitForChild("Balls")
-        for _, obj in pairs(BallsFolder:GetChildren()) do
-            if obj:IsA("BasePart") and obj.AssemblyLinearVelocity.Magnitude > BallPredThreshold then
-                local land = findLandingPosition(obj.AssemblyLinearVelocity, obj.Position, workspace.Gravity, BallPredAccuracy)
-                local a0 = Instance.new("Attachment", workspace.Terrain)
-                a0.WorldPosition = obj.Position
-                local a1 = Instance.new("Attachment", workspace.Terrain)
-                a1.WorldPosition = land
-                local beam = Instance.new("Beam")
-                beam.Attachment0 = a0
-                beam.Attachment1 = a1
-                beam.Width0 = BallPredSize
-                beam.Width1 = BallPredSize
-                beam.FaceCamera = true
-                beam.Color = ColorSequence.new(BallPredColor)
-                beam.Parent = obj
-                table.insert(BallPredDump, a0)
-                table.insert(BallPredDump, a1)
-                table.insert(BallPredDump, beam)
+local function cleanAll()
+    for ball, data in pairs(ballData) do
+        for _, att  in ipairs(data.attachments) do att:Destroy()  end
+        for _, beam in ipairs(data.beams)       do beam:Destroy() end
+        data.ballBounce:Destroy()
+        data.connection:Disconnect()
+        ballData[ball] = nil
+    end
+end
+
+local function simulateTrajectory(ball)
+    local weight   = ball:FindFirstChild("Weight")
+    local friction = ball:FindFirstChild("Friction")
+    local extraForce = Vector3.new(0, 0, 0)
+    if weight   and weight:IsA("BodyForce")   then extraForce += weight.Force   end
+    if friction and friction:IsA("BodyForce") then extraForce += friction.Force end
+    local mass = ball.AssemblyMass
+    if mass == 0 then mass = 1 end
+    local acceleration = GRAVITY + (extraForce / mass)
+    local points      = {}
+    local pos         = ball.Position
+    local vel         = ball.AssemblyLinearVelocity
+    local bouncePoint = nil
+    for i = 1, STEPS do
+        points[i] = pos
+        local nextVel = vel + acceleration * STEP_SIZE
+        local nextPos = pos + nextVel * STEP_SIZE
+        if not bouncePoint then
+            local dir    = nextPos - pos
+            local result = workspace:Raycast(pos, dir * (1 + BALL_RADIUS / dir.Magnitude), raycastParams)
+            if result then
+                bouncePoint = result.Position + result.Normal * BALL_RADIUS
+            end
+        end
+        vel = nextVel
+        pos = nextPos
+    end
+    return points, bouncePoint
+end
+
+local function updatePredictions()
+    if not predEnabled then return end
+    local ballsFolder = getBallsFolder()
+    if not ballsFolder then return end
+    local allBalls = ballsFolder:GetChildren()
+    table.insert(allBalls, beamFolder)
+    raycastParams.FilterDescendantsInstances = allBalls
+    for _, ball in ipairs(ballsFolder:GetChildren()) do
+        if ball:IsA("BasePart") then
+            if not ballData[ball] then
+                ballData[ball] = createDataForBall(ball)
+            end
+            local data = ballData[ball]
+            local points, bouncePoint = simulateTrajectory(ball)
+            for _, beam in ipairs(data.beams) do
+                beam.Color  = beamColor
+                beam.Width0 = beamWidth0
+                beam.Width1 = beamWidth1
+            end
+            for i, point in ipairs(points) do
+                data.attachments[i].WorldPosition = point
+            end
+            data.ballBounce.Color = bounceColor
+            data.ballBounce.Size  = bounceSize
+            if bouncePoint then
+                data.ballBounce.Position     = bouncePoint
+                data.ballBounce.Transparency = bounceTransp
+            else
+                data.ballBounce.Transparency = 1
             end
         end
     end
-end)
+end
+
+RunService.RenderStepped:Connect(updatePredictions)
+
+BallTab:CreateToggle({
+    Name = "BALL PREDICTION",
+    CurrentValue = false,
+    Callback = function(v)
+        predEnabled = v
+        if not v then cleanAll() end
+    end,
+})
+
+BallTab:CreateColorPicker({
+    Name = "Cor do Beam",
+    Color = Color3.fromRGB(255, 100, 0),
+    Callback = function(v)
+        beamColor = ColorSequence.new(v)
+    end,
+})
+
+BallTab:CreateSlider({
+    Name = "Largura do Beam (início)",
+    Range = {0.01, 1}, Increment = 0.01, CurrentValue = 0.15,
+    Callback = function(v) beamWidth0 = v end,
+})
+
+BallTab:CreateSlider({
+    Name = "Largura do Beam (fim)",
+    Range = {0.01, 1}, Increment = 0.01, CurrentValue = 0.05,
+    Callback = function(v) beamWidth1 = v end,
+})
+
+BallTab:CreateColorPicker({
+    Name = "Cor da Bola de Quique",
+    Color = bounceColor,
+    Callback = function(v) bounceColor = v end,
+})
+
+BallTab:CreateSlider({
+    Name = "Tamanho da Bola de Quique",
+    Range = {0.5, 5}, Increment = 0.1, CurrentValue = 1.5,
+    Callback = function(v) bounceSize = Vector3.new(v, v, v) end,
+})
+
+BallTab:CreateSlider({
+    Name = "Transparência da Bola de Quique",
+    Range = {0, 0.9}, Increment = 0.05, CurrentValue = 0.5,
+    Callback = function(v) bounceTransp = v end,
+})
 
 ----------------------------------------------------------------
 -- FAKE LAG
 ----------------------------------------------------------------
 
 local FakeLagEnabled = false
+local FakeLagAmount  = 0.35
 
 FakeLagTab:CreateToggle({
     Name = "ENABLE FAKE LAG",
@@ -404,26 +608,21 @@ FakeLagTab:CreateKeybind({
         if not FakeLagEnabled then settings().Network.IncomingReplicationLag = 0 end
     end,
 })
-local Fa
-keLagAmount = 0.35
 
 FakeLagTab:CreateSlider({
     Name = "Intensidade do Fake Lag",
-    Range = {0.05, 1},
-    Increment = 0.05,
-    CurrentValue = 0.35,
-    Callback = function(v)
-        FakeLagAmount = v
-    end,
+    Range = {0.05, 1}, Increment = 0.05, CurrentValue = 0.35,
+    Callback = function(v) FakeLagAmount = v end,
 })
 
 task.spawn(function()
     while true do
         task.wait()
-        if FakeLagEnabled then
-            settings().Network.IncomingReplicationLag = FakeLagAmount
-        else
-            settings().Network.IncomingReplicationLag = 0
-        end
+        settings().Network.IncomingReplicationLag = FakeLagEnabled and FakeLagAmount or 0
     end
+end)
+
+LocalPlayer.CharacterRemoving:Connect(function()
+    cleanAll()
+    beamFolder:Destroy()
 end)
