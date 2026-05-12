@@ -37,6 +37,17 @@ local legCustomTextureID = ""
 local armCustomMeshID    = ""
 local armCustomTextureID = ""
 
+-- Pega o WalkSpeed padrão da humanoid antes de qualquer modificação
+local defaultWalkSpeed = 16
+do
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChild("Humanoid")
+        if hum then defaultWalkSpeed = hum.WalkSpeed end
+    end
+end
+local currentWalkSpeed = defaultWalkSpeed
+
 local Tab        = Window:CreateTab("SAML LEAKS", 4483362458)
 local ArmsTab    = Window:CreateTab("Arms", 84545033532370)
 local LegTab     = Window:CreateTab("Legs", 79244816732976)
@@ -50,7 +61,6 @@ end
 
 local function sanitizeID(id)
     if id == "" or id == nil then return nil end
-    -- aceita tanto o ID puro quanto rbxassetid://...
     if id:match("^rbxassetid://") then return id end
     if id:match("^%d+$") then return "rbxassetid://" .. id end
     return nil
@@ -74,7 +84,6 @@ local function ApplyLeg()
         else
             local mesh = leg:FindFirstChild("SAML_Mesh") or Instance.new("SpecialMesh", leg)
             mesh.Name = "SAML_Mesh"
-
             local meshID    = sanitizeID(legCustomMeshID)
             local texID     = sanitizeID(legCustomTextureID)
             mesh.MeshId     = meshID    or v_legMeshID
@@ -118,7 +127,6 @@ local function ApplyArm()
         else
             local mesh = arm:FindFirstChild("SAML_ArmMesh") or Instance.new("SpecialMesh", arm)
             mesh.Name = "SAML_ArmMesh"
-
             local meshID    = sanitizeID(armCustomMeshID)
             local texID     = sanitizeID(armCustomTextureID)
             mesh.MeshId     = meshID or v_armMeshID
@@ -177,6 +185,26 @@ local function ResetHead()
     local m = head:FindFirstChildOfClass("SpecialMesh")
     if m then m.Scale = Vector3.new(1.25, 1.25, 1.25) end
 end
+
+----------------------------------------------------------------
+-- REAPPLY APÓS RESPAWN
+----------------------------------------------------------------
+
+local function ReapplyAll()
+    if legEnabled  then ApplyLeg()  end
+    if armEnabled  then ApplyArm()  end
+    if headEnabled then ApplyHead() end
+    -- Reaplica a speed customizada
+    local char = GetChar()
+    local hum = char and char:FindFirstChild("Humanoid")
+    if hum then hum.WalkSpeed = currentWalkSpeed end
+end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    char:WaitForChild("Humanoid", 10)
+    task.wait(0.5) -- espera o personagem carregar completamente
+    ReapplyAll()
+end)
 
 ----------------------------------------------------------------
 -- LEGS TAB UI
@@ -363,14 +391,16 @@ HeadTab:CreateKeybind({
 })
 
 ----------------------------------------------------------------
--- SPEED
+-- SPEED (começa com o WalkSpeed padrão do jogo)
 ----------------------------------------------------------------
 
 Tab:CreateSlider({
     Name = "SAML WALKSPEED",
-    Range = {16, 100}, Increment = 1, CurrentValue = 16,
+    Range = {defaultWalkSpeed, 100}, Increment = 1, CurrentValue = defaultWalkSpeed,
     Callback = function(Value)
-        local hum = GetChar():FindFirstChild("Humanoid")
+        currentWalkSpeed = Value
+        local char = GetChar()
+        local hum = char and char:FindFirstChild("Humanoid")
         if hum then hum.WalkSpeed = Value end
     end,
 })
@@ -624,5 +654,5 @@ end)
 
 LocalPlayer.CharacterRemoving:Connect(function()
     cleanAll()
-    beamFolder:Destroy()
+    -- beamFolder NÃO é destruído para manter as previsões funcionando após respawn
 end)
